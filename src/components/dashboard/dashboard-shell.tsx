@@ -22,6 +22,7 @@ import {
   UsersRound
 } from "lucide-react";
 
+import { ResumeUpload } from "@/components/resume/resume-upload";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -150,9 +151,11 @@ function TopNavbar({ displayName }: DashboardShellProps) {
         <Button variant="outline" size="icon" aria-label="Notifications">
           <Bell className="size-4" aria-hidden="true" />
         </Button>
-        <Button>
-          <Upload aria-hidden="true" />
-          Upload resume
+        <Button asChild>
+          <a href="#resume-upload">
+            <Upload aria-hidden="true" />
+            Upload resume
+          </a>
         </Button>
       </div>
     </header>
@@ -319,6 +322,8 @@ export function DashboardShell({ displayName }: DashboardShellProps) {
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Statistics cards">
               {stats.map((stat) => <StatCard key={stat.label} stat={stat} />)}
             </section>
+
+            <ResumeUpload />
 
             <section className="grid gap-6 xl:grid-cols-3">
               <PerformanceChart />
