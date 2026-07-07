@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { ArrowRight, BrainCircuit } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,15 +31,23 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" className="hidden sm:inline-flex">
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/sign-up">
-              Start free
-              <ArrowRight aria-hidden="true" />
-            </Link>
-          </Button>
+          <SignedOut>
+            <Button asChild variant="ghost" className="hidden sm:inline-flex">
+              <Link href="/sign-in">Sign in</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/sign-up">
+                Start free
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+          </SignedOut>
+          <SignedIn>
+            <Button asChild variant="ghost" className="hidden sm:inline-flex">
+              <Link href="/dashboard">Dashboard</Link>
+            </Button>
+            <UserButton afterSignOutUrl="/" />
+          </SignedIn>
         </div>
       </div>
     </header>
