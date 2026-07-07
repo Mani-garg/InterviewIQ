@@ -22,6 +22,7 @@ import {
   UsersRound
 } from "lucide-react";
 
+import { InterviewGenerator } from "@/components/interview/interview-generator";
 import { ResumeUpload } from "@/components/resume/resume-upload";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -76,8 +77,27 @@ const activityFeed = [
   { text: "Weekly goal streak reached 5 days.", time: "Yesterday", icon: Flame }
 ] as const;
 
+type InterviewQuestion = {
+  question: string;
+  category: string;
+  intent: string;
+  strongAnswerSignals: string[];
+  followUps: string[];
+};
+
+type Interview = {
+  id: string;
+  company: string;
+  role: string;
+  difficulty: string;
+  questionCount: number;
+  questions: InterviewQuestion[];
+  createdAt: string;
+};
+
 type DashboardShellProps = {
   displayName: string;
+  initialInterviews: Interview[];
 };
 
 function DashboardPanel({ className, children }: React.PropsWithChildren<{ className?: string }>) {
@@ -136,7 +156,7 @@ function Sidebar() {
   );
 }
 
-function TopNavbar({ displayName }: DashboardShellProps) {
+function TopNavbar({ displayName }: Pick<DashboardShellProps, "displayName">) {
   return (
     <header className="flex flex-col gap-4 border-b border-white/10 bg-background/30 px-4 py-5 backdrop-blur lg:flex-row lg:items-center lg:justify-between lg:px-8">
       <div>
@@ -311,7 +331,7 @@ function ActivityFeed() {
   );
 }
 
-export function DashboardShell({ displayName }: DashboardShellProps) {
+export function DashboardShell({ displayName, initialInterviews }: DashboardShellProps) {
   return (
     <main className="min-h-[calc(100vh-4rem)] overflow-hidden">
       <div className="mx-auto flex max-w-[1600px]">
@@ -322,6 +342,8 @@ export function DashboardShell({ displayName }: DashboardShellProps) {
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Statistics cards">
               {stats.map((stat) => <StatCard key={stat.label} stat={stat} />)}
             </section>
+
+            <InterviewGenerator initialInterviews={initialInterviews} />
 
             <ResumeUpload />
 
