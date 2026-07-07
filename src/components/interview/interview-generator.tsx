@@ -1,6 +1,7 @@
 "use client";
 
 import type * as React from "react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { BriefcaseBusiness, Building2, CheckCircle2, Layers3, Loader2, MessageSquareText, Sparkles } from "lucide-react";
 
@@ -55,9 +56,9 @@ function InterviewCard({ interview }: { interview: Interview }) {
               <span>{createdAt}</span>
             </p>
           </div>
-          <div className="rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm text-primary">
-            Ready for practice
-          </div>
+          <Link href={`/dashboard/interviews/${interview.id}`} className="inline-flex items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-semibold text-primary transition hover:bg-primary/15">
+            Start session
+          </Link>
         </div>
       </div>
 
