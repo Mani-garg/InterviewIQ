@@ -29,11 +29,11 @@ import { cn } from "@/lib/utils";
 
 const sidebarItems = [
   { label: "Overview", icon: LayoutDashboard, active: true },
-  { label: "Interviews", icon: MessageSquareText },
-  { label: "Resume", icon: FileText },
-  { label: "Goals", icon: Target },
-  { label: "Candidates", icon: UsersRound },
-  { label: "Settings", icon: Settings }
+  { label: "Interviews", icon: MessageSquareText, active: false },
+  { label: "Resume", icon: FileText, active: false },
+  { label: "Goals", icon: Target, active: false },
+  { label: "Candidates", icon: UsersRound, active: false },
+  { label: "Settings", icon: Settings, active: false }
 ] as const;
 
 const stats = [

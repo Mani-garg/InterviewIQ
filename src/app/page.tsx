@@ -103,12 +103,18 @@ const testimonials = [
 
 const pricing = [
   {
-    name: "Starter",
-    price: "$49",
-    description: "For lean teams bringing structure to every interview.",
-    features: ["25 interviews / month", "AI question plans", "Shared scorecards", "Candidate briefs"],
-    cta: "Start free"
-  },
+  name: "Starter",
+  price: "$49",
+  description: "For lean teams bringing structure to every interview.",
+  features: [
+    "25 interviews / month",
+    "AI question plans",
+    "Shared scorecards",
+    "Candidate briefs",
+  ],
+  cta: "Start free",
+  highlighted: false,
+},
   {
     name: "Scale",
     price: "$149",
@@ -118,12 +124,19 @@ const pricing = [
     highlighted: true
   },
   {
-    name: "Enterprise",
-    price: "Custom",
-    description: "For organizations with advanced governance and rollout needs.",
-    features: ["SSO and audit logs", "Custom retention", "Dedicated success", "Security review", "Advanced integrations"],
-    cta: "Talk to sales"
-  }
+  name: "Enterprise",
+  price: "Custom",
+  description: "For organizations with advanced governance and rollout needs.",
+  features: [
+    "SSO and audit logs",
+    "Custom retention",
+    "Dedicated success",
+    "Security review",
+    "Advanced integrations",
+  ],
+  cta: "Talk to sales",
+  highlighted: false,
+},
 ] as const;
 
 const faqs = [
