@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   extractTextFromPdf,
+  normalizeSections,
   parseResumeSections,
 } from "@/lib/resume-parser";
 
@@ -160,7 +161,7 @@ ${extractedText}
       .replace(/```/g, "")
       .trim();
 
-    sections = JSON.parse(cleaned || "{}");
+    sections = normalizeSections(JSON.parse(cleaned || "{}"));
   } catch (error) {
     console.error("Gemini failed.");
 

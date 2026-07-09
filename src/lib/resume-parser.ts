@@ -1,4 +1,4 @@
-const pdfParse = require("pdf-parse");
+import { extractText, getDocumentProxy } from "unpdf";
 
 export type ResumeSectionKey =
   | "skills"
@@ -8,15 +8,74 @@ export type ResumeSectionKey =
 
 export type ParsedResumeSections = Record<ResumeSectionKey, string[]>;
 
+const SECTION_KEYS: ResumeSectionKey[] = [
+  "skills",
+  "education",
+  "projects",
+  "experience",
+];
+
+/**
+ * Turn a single arbitrary item (string, number, or object, as returned
+ * by an LLM that wasn't given a strict schema) into a readable one-line
+ * string. Objects are flattened into "key: value" pairs joined by " · ".
+ */
+function stringifySectionItem(item: unknown): string | null {
+  if (typeof item === "string") {
+    const trimmed = item.trim();
+    return trimmed.length ? trimmed : null;
+  }
+
+  if (typeof item === "number" || typeof item === "boolean") {
+    return String(item);
+  }
+
+  if (item && typeof item === "object") {
+    const parts = Object.values(item as Record<string, unknown>)
+      .filter((value) => typeof value === "string" || typeof value === "number")
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+
+    return parts.length ? parts.join(" · ") : null;
+  }
+
+  return null;
+}
+
+/**
+ * Guarantees the Record<ResumeSectionKey, string[]> shape regardless of
+ * what an upstream source (e.g. an LLM with no enforced schema) actually
+ * returned. Without this, rendering can crash or produce duplicate React
+ * keys when a section item turns out to be an object instead of a string.
+ */
+export function normalizeSections(raw: unknown): ParsedResumeSections {
+  const source = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+
+  const result = {} as ParsedResumeSections;
+
+  for (const key of SECTION_KEYS) {
+    const value = source[key];
+    const list = Array.isArray(value) ? value : [];
+
+    result[key] = list
+      .map(stringifySectionItem)
+      .filter((item): item is string => item !== null)
+      .slice(0, 12);
+  }
+
+  return result;
+}
+
 /**
  * Extract plain text from PDF
  */
 export async function extractTextFromPdf(file: File): Promise<string> {
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const buffer = new Uint8Array(await file.arrayBuffer());
 
-  const data = await pdfParse(buffer);
+  const pdf = await getDocumentProxy(buffer);
+  const { text } = await extractText(pdf, { mergePages: true });
 
-  return data.text
+  return text
     .replace(/\r/g, "\n")
     .replace(/\t/g, " ")
     .replace(/[ ]{2,}/g, " ")

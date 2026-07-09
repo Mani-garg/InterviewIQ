@@ -127,7 +127,7 @@ export function ResumeUpload() {
             {(sectionEntries.length ? sectionEntries : (Object.keys(sectionLabels) as ResumeSectionKey[]).map((key) => [key, []] as [ResumeSectionKey, string[]])).map(([key, items]) => (
               <div key={key} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
                 <h3 className="font-semibold text-foreground">{sectionLabels[key]}</h3>
-                {items.length ? <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">{items.map((item) => <li key={item}>• {item}</li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">Waiting for extraction.</p>}
+                {items.length ? <ul className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">{items.map((item, index) => <li key={`${key}-${index}`}>• {typeof item === "string" ? item : JSON.stringify(item)}</li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">Waiting for extraction.</p>}
               </div>
             ))}
           </div>
