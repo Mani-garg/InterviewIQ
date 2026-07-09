@@ -125,10 +125,7 @@ NO text after JSON.
 
     const raw = response.text ?? "";
 
-    console.log("\n========== RAW GEMINI ==========");
-    console.log(raw);
-    console.log("================================\n");
-
+   
     const start = raw.indexOf("{");
     const end = raw.lastIndexOf("}");
 

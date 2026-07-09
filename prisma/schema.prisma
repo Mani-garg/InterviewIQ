@@ -8,7 +8,6 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-
 model Resume {
   id            String   @id @default(cuid())
   userId        String
@@ -27,16 +26,43 @@ model Resume {
 }
 
 model Interview {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   userId        String
   company       String
   role          String
   difficulty    String
   questionCount Int
   questions     Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  status       String    @default("not_started")
+  overallScore Int?
+  completedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  answers Answer[]
 
   @@index([userId])
   @@index([createdAt])
+}
+
+model Answer {
+  id          String @id @default(cuid())
+  interviewId String
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  questionIndex Int
+  question      String
+  answerText    String @db.Text
+
+  score    Int?
+  feedback String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([interviewId, questionIndex])
+  @@index([interviewId])
 }

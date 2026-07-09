@@ -20,5 +20,28 @@ export default async function InterviewSessionPage({ params }: { params: Promise
   const interview = await prisma.interview.findFirst({ where: { id, userId: user.id } });
   if (!interview) notFound();
 
-  return <InterviewSession interview={{ id: interview.id, company: interview.company, role: interview.role, difficulty: interview.difficulty, questions: interview.questions as unknown as InterviewQuestion[] }} />;
+  const answers = await prisma.answer.findMany({
+    where: { interviewId: id },
+    orderBy: { questionIndex: "asc" }
+  });
+
+  return (
+    <InterviewSession
+      interview={{
+        id: interview.id,
+        company: interview.company,
+        role: interview.role,
+        difficulty: interview.difficulty,
+        questions: interview.questions as unknown as InterviewQuestion[],
+        status: interview.status,
+        overallScore: interview.overallScore
+      }}
+      initialAnswers={answers.map((answer) => ({
+        questionIndex: answer.questionIndex,
+        answerText: answer.answerText,
+        score: answer.score,
+        feedback: answer.feedback
+      }))}
+    />
+  );
 }
