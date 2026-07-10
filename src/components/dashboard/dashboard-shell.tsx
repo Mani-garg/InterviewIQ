@@ -28,8 +28,8 @@ import { cn } from "@/lib/utils";
 
 const sidebarItems = [
   { label: "Overview", icon: LayoutDashboard, kind: "link", href: "/dashboard" },
-  { label: "Interviews", icon: MessageSquareText, kind: "anchor", href: "#interview-generator" },
-  { label: "Resume", icon: FileText, kind: "anchor", href: "#resume-upload" },
+  { label: "Interviews", icon: MessageSquareText, kind: "link", href: "/dashboard/interviews" },
+  { label: "Resume", icon: FileText, kind: "link", href: "/dashboard/resume" },
   { label: "Goals", icon: Target, kind: "anchor", href: "#goals" },
   { label: "Candidates", icon: UsersRound, kind: "soon" },
   { label: "Settings", icon: Settings, kind: "soon" }
@@ -177,10 +177,10 @@ function TopNavbar({ displayName }: Pick<DashboardShellProps, "displayName">) {
           <Bell className="size-4" aria-hidden="true" />
         </Button>
         <Button asChild>
-          <a href="#resume-upload">
+          <Link href="/dashboard/resume">
             <Upload aria-hidden="true" />
             Upload resume
-          </a>
+          </Link>
         </Button>
       </div>
     </header>

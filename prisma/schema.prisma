@@ -16,7 +16,7 @@ model Resume {
   mimeType      String
   storageBucket String
   storagePath   String
-  extractedText String   @db.Text
+  extractedText String
   sections      Json
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -26,86 +26,72 @@ model Resume {
 }
 
 model Interview {
-  id            String @id @default(cuid())
+  id            String    @id @default(cuid())
   userId        String
   company       String
   role          String
   difficulty    String
   questionCount Int
   questions     Json
-
-  status       String    @default("not_started")
-  overallScore Int?
-  completedAt  DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  answers Answer[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  status        String    @default("not_started")
+  overallScore  Int?
+  completedAt   DateTime?
+  answers       Answer[]
 
   @@index([userId])
   @@index([createdAt])
 }
 
 model Answer {
-  id          String @id @default(cuid())
-  interviewId String
-
-  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
-
+  id            String    @id @default(cuid())
+  interviewId   String
   questionIndex Int
   question      String
-  answerText    String @db.Text
-
-  score    Int?
-  feedback String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  answerText    String
+  score         Int?
+  feedback      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  interview     Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
 
   @@unique([interviewId, questionIndex])
   @@index([interviewId])
 }
 
 model Goal {
-  id     String @id @default(cuid())
-  userId String
-
+  id           String   @id @default(cuid())
+  userId       String
   title        String
-  targetCount  Int    @default(1)
-  currentCount Int    @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  targetCount  Int      @default(1)
+  currentCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([userId])
   @@index([userId, createdAt])
 }
 
 model ScheduledInterview {
-  id     String @id @default(cuid())
-  userId String
-
-  company String
-  role    String
-  type    String
-
+  id          String   @id @default(cuid())
+  userId      String
+  company     String
+  role        String
+  type        String
   scheduledAt DateTime
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userId])
   @@index([userId, scheduledAt])
 }
 
 model ActivityEvent {
-  id     String @id @default(cuid())
-  userId String
-
-  type    String
-  message String
-
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
   createdAt DateTime @default(now())
 
   @@index([userId])

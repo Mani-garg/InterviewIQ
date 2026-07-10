@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Loader2, ShieldCheck, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -38,14 +39,19 @@ export function ResumeStatus({ resume: initialResume }: { resume: ResumeSummary 
   if (!resume) {
     return (
       <DashboardPanel>
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">Resume status</h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">Resume status</h2>
+          <Link href="/dashboard/resume" className="shrink-0 text-sm font-medium text-primary transition-colors hover:text-primary/80">
+            Manage resumes
+          </Link>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">Upload a resume to see extraction results here.</p>
         <div className="mt-5 rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
           <ShieldCheck className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
           <p className="mt-3 text-sm text-muted-foreground">No resume uploaded yet.</p>
-          <a href="#resume-upload" className="mt-3 inline-block text-sm font-medium text-primary hover:text-primary/80">
+          <Link href="/dashboard/resume" className="mt-3 inline-block text-sm font-medium text-primary hover:text-primary/80">
             Upload one now
-          </a>
+          </Link>
         </div>
       </DashboardPanel>
     );
@@ -83,6 +89,9 @@ export function ResumeStatus({ resume: initialResume }: { resume: ResumeSummary 
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-foreground">Resume status</h2>
           <p className="mt-1 text-sm text-muted-foreground">{resume.fileName} · uploaded {uploadedAt}</p>
+          <Link href="/dashboard/resume" className="mt-1 inline-block text-sm font-medium text-primary transition-colors hover:text-primary/80">
+            Manage resumes
+          </Link>
         </div>
         <button
           type="button"
