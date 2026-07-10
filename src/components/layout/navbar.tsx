@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { href: "#platform", label: "Platform" },
   { href: "#workflow", label: "Workflow" },
-  { href: "#insights", label: "Insights" },
-  { href: "#pricing", label: "Pricing" }
+  { href: "#insights", label: "Insights" }
 ] as const;
 
 export function Navbar() {

@@ -154,12 +154,21 @@ export async function POST(request: Request) {
 
   let sections;
 
-  try {
-    const ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY!,
-    });
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("Missing GEMINI_API_KEY. Falling back to heuristic resume parsing.");
 
-    const prompt = `
+    //--------------------------------------------------
+    // fallback parser (no Gemini key configured)
+    //--------------------------------------------------
+
+    sections = parseResumeSections(extractedText);
+  } else {
+    try {
+      const ai = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+      });
+
+      const prompt = `
 You are an ATS Resume Parser.
 
 Extract the following sections.
@@ -178,27 +187,28 @@ Resume:
 ${extractedText}
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+      });
 
-    const cleaned = response.text
-      ?.replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+      const cleaned = response.text
+        ?.replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
 
-    sections = normalizeSections(JSON.parse(cleaned || "{}"));
-  } catch (error) {
-    console.error("Gemini failed.");
+      sections = normalizeSections(JSON.parse(cleaned || "{}"));
+    } catch (error) {
+      console.error("Gemini failed.");
 
-    console.error(error);
+      console.error(error);
 
-    //--------------------------------------------------
-    // fallback parser
-    //--------------------------------------------------
+      //--------------------------------------------------
+      // fallback parser
+      //--------------------------------------------------
 
-    sections = parseResumeSections(extractedText);
+      sections = parseResumeSections(extractedText);
+    }
   }
 
   //--------------------------------------------------

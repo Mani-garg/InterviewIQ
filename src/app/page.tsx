@@ -16,7 +16,6 @@ import {
   Quote,
   ShieldCheck,
   Sparkles,
-  Star,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -101,44 +100,6 @@ const testimonials = [
   }
 ] as const;
 
-const pricing = [
-  {
-  name: "Starter",
-  price: "$49",
-  description: "For lean teams bringing structure to every interview.",
-  features: [
-    "25 interviews / month",
-    "AI question plans",
-    "Shared scorecards",
-    "Candidate briefs",
-  ],
-  cta: "Start free",
-  highlighted: false,
-},
-  {
-    name: "Scale",
-    price: "$149",
-    description: "For growing hiring teams that need deeper insight and collaboration.",
-    features: ["Unlimited interviews", "Panel alignment analytics", "Custom competencies", "Priority support", "Workspace permissions"],
-    cta: "Choose Scale",
-    highlighted: true
-  },
-  {
-  name: "Enterprise",
-  price: "Custom",
-  description: "For organizations with advanced governance and rollout needs.",
-  features: [
-    "SSO and audit logs",
-    "Custom retention",
-    "Dedicated success",
-    "Security review",
-    "Advanced integrations",
-  ],
-  cta: "Talk to sales",
-  highlighted: false,
-},
-] as const;
-
 const faqs = [
   {
     question: "Does InterviewIQ replace interviewers?",
@@ -215,11 +176,9 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"><SectionHeading eyebrow="Testimonials" title="Loved by teams that treat hiring quality as a product advantage." description="Recruiting leaders, hiring managers, and people teams use InterviewIQ to create repeatable, high-signal decisions." /><div className="mt-12 grid gap-5 lg:grid-cols-3">{testimonials.map((item) => <motion.figure key={item.name} className="rounded-[1.5rem] border border-white/10 bg-white/[0.035] p-7" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}><Quote className="size-6 text-primary" /><blockquote className="mt-5 leading-7 text-foreground">“{item.quote}”</blockquote><figcaption className="mt-6 border-t border-white/10 pt-5"><p className="font-semibold">{item.name}</p><p className="text-sm text-muted-foreground">{item.role}</p></figcaption></motion.figure>)}</div></section>
 
-      <section id="pricing" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"><SectionHeading eyebrow="Pricing" title="Simple plans for serious hiring teams." description="Start with structured interviews today and scale into a complete interview intelligence platform as your team grows." /><div className="mt-12 grid gap-5 lg:grid-cols-3">{pricing.map((plan) => <motion.div key={plan.name} className={`rounded-[1.75rem] border p-7 ${plan.highlighted ? "border-primary/50 bg-primary/10 shadow-[0_0_60px_-28px_hsl(var(--primary))]" : "border-white/10 bg-white/[0.035]"}`} initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}>{plan.highlighted && <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"><Star className="size-3" /> Most popular</div>}<h3 className="text-2xl font-semibold">{plan.name}</h3><p className="mt-3 min-h-14 text-muted-foreground">{plan.description}</p><div className="mt-6 flex items-end gap-1"><span className="text-5xl font-semibold tracking-[-0.05em]">{plan.price}</span>{plan.price.startsWith("$") && <span className="pb-2 text-muted-foreground">/mo</span>}</div><Button asChild className="mt-7 w-full" variant={plan.highlighted ? "default" : "outline"}><Link href="/sign-up">{plan.cta}</Link></Button><ul className="mt-7 space-y-3">{plan.features.map((feature) => <li key={feature} className="flex gap-3 text-sm text-muted-foreground"><Check className="mt-0.5 size-4 text-primary" />{feature}</li>)}</ul></motion.div>)}</div></section>
-
       <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8"><SectionHeading eyebrow="FAQ" title="Questions before you build a better interview loop?" description="Here are the essentials for evaluating InterviewIQ for your hiring team." /><div className="mt-12 space-y-4">{faqs.map((faq) => <motion.details key={faq.question} className="group rounded-2xl border border-white/10 bg-white/[0.035] p-6" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp}><summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold"><span>{faq.question}</span><CheckCircle2 className="size-5 text-primary transition group-open:rotate-45" /></summary><p className="mt-4 leading-7 text-muted-foreground">{faq.answer}</p></motion.details>)}</div></section>
 
-      <footer className="border-t border-white/10 px-4 py-12 sm:px-6 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]"><BrainCircuit className="size-5 text-primary" /></span><span className="font-semibold">InterviewIQ</span></div><p className="mt-3 max-w-md text-sm text-muted-foreground">Premium AI interview intelligence for structured, fair, and confident hiring decisions.</p></div><div className="flex flex-wrap gap-4 text-sm text-muted-foreground"><Link href="#features" className="hover:text-foreground">Features</Link><Link href="#workflow" className="hover:text-foreground">How it works</Link><Link href="#pricing" className="hover:text-foreground">Pricing</Link><Link href="/sign-up" className="hover:text-foreground">Get started</Link></div></div><div className="mx-auto mt-8 flex max-w-7xl items-center justify-between border-t border-white/10 pt-6 text-xs text-muted-foreground"><span>© 2026 InterviewIQ. All rights reserved.</span><span className="flex items-center gap-2"><Clock3 className="size-3" /> Built for faster hiring loops</span></div></footer>
+      <footer className="border-t border-white/10 px-4 py-12 sm:px-6 lg:px-8"><div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]"><BrainCircuit className="size-5 text-primary" /></span><span className="font-semibold">InterviewIQ</span></div><p className="mt-3 max-w-md text-sm text-muted-foreground">Premium AI interview intelligence for structured, fair, and confident hiring decisions.</p></div><div className="flex flex-wrap gap-4 text-sm text-muted-foreground"><Link href="#features" className="hover:text-foreground">Features</Link><Link href="#workflow" className="hover:text-foreground">How it works</Link><Link href="/sign-up" className="hover:text-foreground">Get started</Link></div></div><div className="mx-auto mt-8 flex max-w-7xl items-center justify-between border-t border-white/10 pt-6 text-xs text-muted-foreground"><span>© 2026 InterviewIQ. All rights reserved.</span><span className="flex items-center gap-2"><Clock3 className="size-3" /> Built for faster hiring loops</span></div></footer>
     </main>
   );
 }
