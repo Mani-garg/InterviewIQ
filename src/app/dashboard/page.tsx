@@ -71,6 +71,7 @@ export default async function DashboardPage() {
       resume={
         latestResume
           ? {
+              id: latestResume.id,
               fileName: latestResume.fileName,
               createdAt: latestResume.createdAt.toISOString(),
               sections: latestResume.sections as unknown as Record<string, string[]>

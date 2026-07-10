@@ -13,6 +13,32 @@ import {
 const bucketName =
   process.env.SUPABASE_STORAGE_BUCKET ?? "interviewiq";
 
+export async function GET() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json(
+      { error: "You must be signed in." },
+      { status: 401 }
+    );
+  }
+
+  const resumes = await prisma.resume.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      fileName: true,
+      fileSize: true,
+      createdAt: true,
+      sections: true,
+    },
+  });
+
+  return NextResponse.json({ resumes });
+}
+
 export async function POST(request: Request) {
   const { userId } = await auth();
 

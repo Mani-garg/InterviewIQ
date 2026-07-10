@@ -13,7 +13,6 @@ import {
   MessageSquareText,
   Search,
   Settings,
-  ShieldCheck,
   Sparkles,
   Target,
   TrendingUp,
@@ -22,6 +21,8 @@ import {
 } from "lucide-react";
 
 import { InterviewGenerator } from "@/components/interview/interview-generator";
+import { RecentInterviews } from "@/components/dashboard/recent-interviews";
+import { ResumeStatus } from "@/components/dashboard/resume-status";
 import { ResumeUpload } from "@/components/resume/resume-upload";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ type DashboardStats = {
 type ChartPoint = { label: string; score: number };
 
 type ResumeSummary = {
+  id: string;
   fileName: string;
   createdAt: string;
   sections: Record<string, string[]>;
@@ -314,88 +316,6 @@ function PerformanceChart({ chartData }: { chartData: ChartPoint[] }) {
           ))}
         </div>
       )}
-    </DashboardPanel>
-  );
-}
-
-function statusLabel(interview: Interview) {
-  if (interview.status === "completed") return interview.overallScore !== null ? `${interview.overallScore}%` : "Completed";
-  if (interview.status === "in_progress") return "In progress";
-  return "Not started";
-}
-
-function RecentInterviews({ interviews }: { interviews: Interview[] }) {
-  return (
-    <DashboardPanel>
-      <SectionHeader title="Recent interviews" description="Your latest generated practice sessions." />
-      <div className="mt-5 space-y-3">
-        {interviews.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm text-muted-foreground">
-            No interviews yet. Generate one below to get started.
-          </p>
-        ) : (
-          interviews.map((interview) => (
-            <Link
-              key={interview.id}
-              href={`/dashboard/interviews/${interview.id}`}
-              className="block rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition-colors hover:border-primary/40 hover:bg-white/[0.05]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium text-foreground">{interview.role}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {interview.company} ·{" "}
-                    {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(interview.createdAt))}
-                  </p>
-                </div>
-                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                  {statusLabel(interview)}
-                </span>
-              </div>
-            </Link>
-          ))
-        )}
-      </div>
-    </DashboardPanel>
-  );
-}
-
-function ResumeStatus({ resume }: { resume: ResumeSummary }) {
-  if (!resume) {
-    return (
-      <DashboardPanel>
-        <SectionHeader title="Resume status" description="Upload a resume to see extraction results here." />
-        <div className="mt-5 rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
-          <ShieldCheck className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
-          <p className="mt-3 text-sm text-muted-foreground">No resume uploaded yet.</p>
-          <a href="#resume-upload" className="mt-3 inline-block text-sm font-medium text-primary hover:text-primary/80">
-            Upload one now
-          </a>
-        </div>
-      </DashboardPanel>
-    );
-  }
-
-  const sectionEntries = Object.entries(resume.sections);
-  const uploadedAt = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(resume.createdAt));
-
-  return (
-    <DashboardPanel>
-      <SectionHeader title="Resume status" description={`${resume.fileName} · uploaded ${uploadedAt}`} />
-      <div className="mt-5 space-y-4">
-        {sectionEntries.map(([label, items]) => {
-          const coverage = Math.min(100, items.length * 25);
-          return (
-            <div key={label}>
-              <div className="mb-2 flex justify-between text-sm">
-                <span className="capitalize">{label}</span>
-                <span className="text-muted-foreground">{items.length} item{items.length === 1 ? "" : "s"} found</span>
-              </div>
-              <ProgressBar value={coverage} />
-            </div>
-          );
-        })}
-      </div>
     </DashboardPanel>
   );
 }
