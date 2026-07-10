@@ -6,7 +6,9 @@ export type ActivityType =
   | "interview_completed"
   | "goal_created"
   | "goal_updated"
-  | "interview_scheduled";
+  | "goal_deleted"
+  | "interview_scheduled"
+  | "interview_schedule_cancelled";
 
 /**
  * Records a real activity feed entry for a user. Best-effort: a logging

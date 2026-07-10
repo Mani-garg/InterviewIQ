@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
+import { logActivity } from "@/lib/activity";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -19,7 +20,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
 
   const existing = await prisma.scheduledInterview.findFirst({
     where: { id, userId },
-    select: { id: true }
+    select: { id: true, company: true, role: true }
   });
 
   if (!existing) {
@@ -30,6 +31,12 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   }
 
   await prisma.scheduledInterview.delete({ where: { id } });
+
+  await logActivity(
+    userId,
+    "interview_schedule_cancelled",
+    `Cancelled the ${existing.role} interview with ${existing.company}.`
+  );
 
   return NextResponse.json({ success: true });
 }

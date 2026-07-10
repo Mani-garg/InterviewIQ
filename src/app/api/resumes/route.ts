@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
+import { logActivity } from "@/lib/activity";
 import { prisma } from "@/lib/prisma";
 import {
   extractTextFromPdf,
@@ -216,6 +217,8 @@ ${extractedText}
       sections,
     },
   });
+
+  await logActivity(userId, "resume_uploaded", `Uploaded resume "${file.name}".`);
 
   return NextResponse.json({
     resume,

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { logActivity } from "@/lib/activity";
 import { prisma } from "@/lib/prisma";
 import { scoreAnswer, scoreOverall } from "@/lib/scoring";
 
@@ -100,6 +101,14 @@ export async function POST(request: Request, { params }: RouteContext) {
       completedAt: new Date()
     }
   });
+
+  await logActivity(
+    userId,
+    "interview_completed",
+    overallScore !== null
+      ? `Completed the ${interview.role} interview for ${interview.company} — scored ${overallScore}%.`
+      : `Completed the ${interview.role} interview for ${interview.company}.`
+  );
 
   return NextResponse.json({
     interview: updatedInterview,

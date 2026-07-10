@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { logActivity } from "@/lib/activity";
 import { prisma } from "@/lib/prisma";
 import { checkInterviewGenerationRateLimit } from "@/lib/rate-limit";
 
@@ -196,6 +197,12 @@ NO text after JSON.
         questions,
       },
     });
+
+    await logActivity(
+      userId,
+      "interview_generated",
+      `Generated a ${difficulty.toLowerCase()} ${role} interview for ${company}.`
+    );
 
     return NextResponse.json({ interview });
   } catch (err) {

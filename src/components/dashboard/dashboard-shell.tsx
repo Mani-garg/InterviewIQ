@@ -3,26 +3,25 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   Bell,
-  CalendarDays,
   CheckCircle2,
-  ChevronRight,
   FileText,
-  Flame,
   Home,
   LayoutDashboard,
   MessageSquareText,
   Search,
   Settings,
-  Sparkles,
   Target,
   TrendingUp,
   Upload,
   UsersRound
 } from "lucide-react";
 
-import { InterviewGenerator } from "@/components/interview/interview-generator";
+import { ActivityFeedPanel, type ActivityEvent } from "@/components/dashboard/activity-feed-panel";
+import { GoalsPanel, type Goal } from "@/components/dashboard/goals-panel";
 import { RecentInterviews } from "@/components/dashboard/recent-interviews";
 import { ResumeStatus } from "@/components/dashboard/resume-status";
+import { UpcomingInterviewsPanel, type ScheduledInterview } from "@/components/dashboard/upcoming-interviews-panel";
+import { InterviewGenerator } from "@/components/interview/interview-generator";
 import { ResumeUpload } from "@/components/resume/resume-upload";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,31 +30,9 @@ const sidebarItems = [
   { label: "Overview", icon: LayoutDashboard, kind: "link", href: "/dashboard" },
   { label: "Interviews", icon: MessageSquareText, kind: "anchor", href: "#interview-generator" },
   { label: "Resume", icon: FileText, kind: "anchor", href: "#resume-upload" },
-  { label: "Goals", icon: Target, kind: "soon" },
+  { label: "Goals", icon: Target, kind: "anchor", href: "#goals" },
   { label: "Candidates", icon: UsersRound, kind: "soon" },
   { label: "Settings", icon: Settings, kind: "soon" }
-] as const;
-
-// These sections have no backing data model yet (no scheduling, goals, or
-// activity-log feature), so they stay illustrative. Flagged in the UI as
-// sample data rather than presented as if they were real.
-const goals = [
-  { label: "Complete 4 mock interviews", value: 75, meta: "3 of 4 done" },
-  { label: "Practice behavioral stories", value: 60, meta: "6 of 10 stories" },
-  { label: "Apply to target roles", value: 45, meta: "9 of 20 roles" }
-] as const;
-
-const upcomingInterviews = [
-  { role: "Senior UX Designer", company: "Canvas Cloud", time: "Tomorrow · 10:00 AM", type: "Portfolio review" },
-  { role: "Growth Marketer", company: "SignalWorks", time: "Fri · 2:30 PM", type: "Hiring manager" },
-  { role: "Software Engineer", company: "Helio Bank", time: "Mon · 9:00 AM", type: "Technical screen" }
-] as const;
-
-const activityFeed = [
-  { text: "Resume score improved after adding measurable outcomes.", time: "12 min ago", icon: FileText },
-  { text: "New practice prompt added for leadership scenarios.", time: "1 hr ago", icon: Sparkles },
-  { text: "Interview notes synced for Northstar Labs.", time: "3 hrs ago", icon: CheckCircle2 },
-  { text: "Weekly goal streak reached 5 days.", time: "Yesterday", icon: Flame }
 ] as const;
 
 type InterviewQuestion = {
@@ -100,6 +77,9 @@ type DashboardShellProps = {
   stats: DashboardStats;
   chartData: ChartPoint[];
   resume: ResumeSummary;
+  initialGoals: Goal[];
+  initialScheduledInterviews: ScheduledInterview[];
+  initialActivity: ActivityEvent[];
 };
 
 function DashboardPanel({ className, children }: React.PropsWithChildren<{ className?: string }>) {
@@ -109,37 +89,19 @@ function DashboardPanel({ className, children }: React.PropsWithChildren<{ class
 function SectionHeader({
   title,
   description,
-  action,
-  sample
+  action
 }: {
   title: string;
   description?: string;
   action?: string;
-  sample?: boolean;
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
-          {sample ? (
-            <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-amber-300">
-              Sample data
-            </span>
-          ) : null}
-        </div>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
         {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {action ? <button className="text-sm font-medium text-primary transition-colors hover:text-primary/80">{action}</button> : null}
-    </div>
-  );
-}
-
-function ProgressBar({ value }: { value: number }) {
-  const clamped = Math.max(0, Math.min(100, value));
-  return (
-    <div className="h-2 overflow-hidden rounded-full bg-white/10" aria-label={`${clamped}% complete`}>
-      <div className="h-full rounded-full bg-primary" style={{ width: `${clamped}%` }} />
     </div>
   );
 }
@@ -320,69 +282,16 @@ function PerformanceChart({ chartData }: { chartData: ChartPoint[] }) {
   );
 }
 
-function Goals() {
-  return (
-    <DashboardPanel>
-      <SectionHeader title="Goals" description="Keep your preparation on track." sample />
-      <div className="mt-5 space-y-4">
-        {goals.map((goal) => (
-          <div key={goal.label} className="space-y-2">
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-foreground">{goal.label}</span>
-              <span className="text-muted-foreground">{goal.meta}</span>
-            </div>
-            <ProgressBar value={goal.value} />
-          </div>
-        ))}
-      </div>
-    </DashboardPanel>
-  );
-}
-
-function UpcomingInterviews() {
-  return (
-    <DashboardPanel>
-      <SectionHeader title="Upcoming interviews" description="Your next scheduled conversations." sample />
-      <div className="mt-5 space-y-3">
-        {upcomingInterviews.map((interview) => (
-          <div key={`${interview.role}-${interview.company}`} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"><CalendarDays className="size-5" /></div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-foreground">{interview.role}</p>
-              <p className="truncate text-sm text-muted-foreground">{interview.company} · {interview.time}</p>
-              <p className="mt-1 text-xs text-primary">{interview.type}</p>
-            </div>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </div>
-        ))}
-      </div>
-    </DashboardPanel>
-  );
-}
-
-function ActivityFeed() {
-  return (
-    <DashboardPanel>
-      <SectionHeader title="Activity feed" description="Recent workspace updates." sample />
-      <div className="mt-5 space-y-5">
-        {activityFeed.map((activity) => {
-          const Icon = activity.icon;
-          return (
-            <div key={activity.text} className="flex gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-primary"><Icon className="size-4" /></div>
-              <div>
-                <p className="text-sm leading-6 text-foreground">{activity.text}</p>
-                <p className="text-xs text-muted-foreground">{activity.time}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </DashboardPanel>
-  );
-}
-
-export function DashboardShell({ displayName, initialInterviews, stats, chartData, resume }: DashboardShellProps) {
+export function DashboardShell({
+  displayName,
+  initialInterviews,
+  stats,
+  chartData,
+  resume,
+  initialGoals,
+  initialScheduledInterviews,
+  initialActivity
+}: DashboardShellProps) {
   return (
     <main className="min-h-[calc(100vh-4rem)] overflow-hidden">
       <div className="mx-auto flex max-w-[1600px]">
@@ -401,11 +310,11 @@ export function DashboardShell({ displayName, initialInterviews, stats, chartDat
               <RecentInterviews interviews={initialInterviews} />
             </section>
 
-            <section className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4">
+            <section id="goals" className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4 scroll-mt-24">
               <ResumeStatus resume={resume} />
-              <Goals />
-              <UpcomingInterviews />
-              <ActivityFeed />
+              <GoalsPanel initialGoals={initialGoals} />
+              <UpcomingInterviewsPanel initialScheduledInterviews={initialScheduledInterviews} />
+              <ActivityFeedPanel initialActivity={initialActivity} />
             </section>
           </div>
         </div>

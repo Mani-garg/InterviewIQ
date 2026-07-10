@@ -69,7 +69,7 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
 
   const existing = await prisma.goal.findFirst({
     where: { id, userId },
-    select: { id: true }
+    select: { id: true, title: true }
   });
 
   if (!existing) {
@@ -77,6 +77,8 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   }
 
   await prisma.goal.delete({ where: { id } });
+
+  await logActivity(userId, "goal_deleted", `Removed goal: "${existing.title}".`);
 
   return NextResponse.json({ success: true });
 }

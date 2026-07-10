@@ -16,7 +16,16 @@ export default async function DashboardPage() {
   const displayName = user?.firstName ?? user?.username ?? "there";
   const userId = user?.id;
 
-  const [recentInterviews, totalInterviews, completedInterviews, resumesCount, latestResume] = userId
+  const [
+    recentInterviews,
+    totalInterviews,
+    completedInterviews,
+    resumesCount,
+    latestResume,
+    goals,
+    scheduledInterviews,
+    activityEvents
+  ] = userId
     ? await Promise.all([
         prisma.interview.findMany({
           where: { userId },
@@ -31,9 +40,24 @@ export default async function DashboardPage() {
           select: { id: true, overallScore: true, completedAt: true, role: true, company: true }
         }),
         prisma.resume.count({ where: { userId } }),
-        prisma.resume.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } })
+        prisma.resume.findFirst({ where: { userId }, orderBy: { createdAt: "desc" } }),
+        prisma.goal.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          take: 6
+        }),
+        prisma.scheduledInterview.findMany({
+          where: { userId, scheduledAt: { gte: new Date() } },
+          orderBy: { scheduledAt: "asc" },
+          take: 5
+        }),
+        prisma.activityEvent.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          take: 8
+        })
       ])
-    : [[], 0, [], 0, null];
+    : [[], 0, [], 0, null, [], [], []];
 
   const scoredCompleted = completedInterviews.filter(
     (interview): interview is typeof interview & { overallScore: number } => interview.overallScore !== null
@@ -78,6 +102,25 @@ export default async function DashboardPage() {
             }
           : null
       }
+      initialGoals={goals.map((goal) => ({
+        id: goal.id,
+        title: goal.title,
+        targetCount: goal.targetCount,
+        currentCount: goal.currentCount
+      }))}
+      initialScheduledInterviews={scheduledInterviews.map((interview) => ({
+        id: interview.id,
+        company: interview.company,
+        role: interview.role,
+        type: interview.type,
+        scheduledAt: interview.scheduledAt.toISOString()
+      }))}
+      initialActivity={activityEvents.map((event) => ({
+        id: event.id,
+        type: event.type,
+        message: event.message,
+        createdAt: event.createdAt.toISOString()
+      }))}
     />
   );
 }
