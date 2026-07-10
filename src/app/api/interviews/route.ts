@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { checkInterviewGenerationRateLimit } from "@/lib/rate-limit";
 
 const difficulties = [
   "Beginner",
@@ -58,6 +59,23 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "You must be signed in." },
         { status: 401 }
+      );
+    }
+
+    const rateLimit = await checkInterviewGenerationRateLimit(userId);
+
+    if (rateLimit.limited) {
+      const message =
+        rateLimit.reason === "cooldown"
+          ? "You're generating interviews too quickly. Please wait a moment and try again."
+          : "You've reached the hourly limit for interview generation. Please try again later.";
+
+      return NextResponse.json(
+        { error: message },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+        }
       );
     }
 
@@ -155,10 +173,10 @@ NO text after JSON.
       generatedInterviewSchema.safeParse(parsedJson);
 
     if (!validated.success) {
-      console.log("\n========== ZOD ERROR ==========");
-      console.dir(validated.error.format(), {
-        depth: null,
-      });
+      console.error(
+        "Gemini response failed schema validation:",
+        validated.error.flatten()
+      );
 
       return NextResponse.json(
         { error: "Gemini returned an unexpected interview format." },

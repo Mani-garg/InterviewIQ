@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Loader2, UploadCloud, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,14 +26,51 @@ function formatSize(size: number) {
   return `${(size / 1024 / 1024).toFixed(2)} MB`;
 }
 
+function formatDate(iso: string) {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" }).format(new Date(iso));
+}
+
 export function ResumeUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resume, setResume] = useState<UploadedResume | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Preload the user's most recently uploaded resume so the widget doesn't
+  // start blank on every page load/refresh, even though a separate
+  // ResumeStatus panel elsewhere on the dashboard already shows it.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadExistingResume() {
+      try {
+        const response = await fetch("/api/resumes");
+        if (!response.ok) return;
+
+        const payload = await response.json();
+        const latest: UploadedResume | undefined = payload.resumes?.[0];
+
+        if (!cancelled && latest) {
+          setResume(latest);
+        }
+      } catch {
+        // Non-fatal: if this fails, the widget just behaves as if the user
+        // has no resume yet, which still allows uploading a new one.
+      } finally {
+        if (!cancelled) setIsLoadingInitial(false);
+      }
+    }
+
+    loadExistingResume();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const chooseFile = useCallback((nextFile: File | undefined) => {
     if (!nextFile) return;
@@ -72,6 +109,8 @@ export function ResumeUpload() {
     setResume(payload.resume);
   }
 
+  const savedResume = !file ? resume : null;
+
   return (
     <section id="resume-upload" className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
       <div className="rounded-3xl border border-white/10 bg-card/70 p-5 shadow-2xl shadow-black/20">
@@ -81,7 +120,7 @@ export function ResumeUpload() {
             <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">Add your PDF resume</h2>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">Drag and drop a PDF, preview it, upload it to Supabase Storage, and review extracted resume sections.</p>
           </div>
-          {file ? <Button variant="outline" onClick={() => inputRef.current?.click()}>Replace</Button> : null}
+          {file || savedResume ? <Button variant="outline" onClick={() => inputRef.current?.click()}>Replace</Button> : null}
         </div>
 
         <div
@@ -98,7 +137,13 @@ export function ResumeUpload() {
           <div className="flex size-16 items-center justify-center rounded-3xl bg-primary/10 text-primary"><UploadCloud className="size-8" /></div>
           <p className="mt-5 text-lg font-semibold text-foreground">Drop your resume here</p>
           <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">PDF files only. We store the document securely and save metadata plus extracted sections to PostgreSQL.</p>
-          {file ? <p className="mt-4 rounded-full bg-white/[0.06] px-4 py-2 text-sm text-foreground">{file.name} · {formatSize(file.size)}</p> : null}
+          {file ? (
+            <p className="mt-4 rounded-full bg-white/[0.06] px-4 py-2 text-sm text-foreground">{file.name} · {formatSize(file.size)}</p>
+          ) : savedResume ? (
+            <p className="mt-4 rounded-full bg-white/[0.06] px-4 py-2 text-sm text-foreground">Currently on file: {savedResume.fileName} · {formatSize(savedResume.fileSize)}</p>
+          ) : isLoadingInitial ? (
+            <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Checking for a saved resume...</p>
+          ) : null}
         </div>
 
         {error ? <p className="mt-4 rounded-2xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{error}</p> : null}
@@ -116,7 +161,18 @@ export function ResumeUpload() {
         <div className="rounded-3xl border border-white/10 bg-card/70 p-5 shadow-2xl shadow-black/20">
           <div className="flex items-center gap-3"><FileText className="size-5 text-primary" /><h2 className="text-lg font-semibold">PDF preview</h2></div>
           <div className="mt-5 h-96 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]">
-            {previewUrl ? <iframe title="Resume PDF preview" src={previewUrl} className="h-full w-full" /> : <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">Choose a PDF to preview it here.</div>}
+            {previewUrl ? (
+              <iframe title="Resume PDF preview" src={previewUrl} className="h-full w-full" />
+            ) : savedResume ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm text-muted-foreground">
+                <FileText className="size-8 text-primary/70" />
+                <p className="text-foreground">{savedResume.fileName}</p>
+                <p>Uploaded {formatDate(savedResume.createdAt)}</p>
+                <p className="max-w-xs">Choose a new PDF above to preview it here and replace this resume.</p>
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">Choose a PDF to preview it here.</div>
+            )}
           </div>
         </div>
 

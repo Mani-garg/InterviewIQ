@@ -66,3 +66,48 @@ model Answer {
   @@unique([interviewId, questionIndex])
   @@index([interviewId])
 }
+
+model Goal {
+  id     String @id @default(cuid())
+  userId String
+
+  title        String
+  targetCount  Int    @default(1)
+  currentCount Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
+
+model ScheduledInterview {
+  id     String @id @default(cuid())
+  userId String
+
+  company String
+  role    String
+  type    String
+
+  scheduledAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, scheduledAt])
+}
+
+model ActivityEvent {
+  id     String @id @default(cuid())
+  userId String
+
+  type    String
+  message String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+}
