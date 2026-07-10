@@ -1,9 +1,8 @@
 import type * as React from "react";
 import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
 import {
-  ArrowUpRight,
   Bell,
-  BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -28,36 +27,17 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const sidebarItems = [
-  { label: "Overview", icon: LayoutDashboard, active: true },
-  { label: "Interviews", icon: MessageSquareText, active: false },
-  { label: "Resume", icon: FileText, active: false },
-  { label: "Goals", icon: Target, active: false },
-  { label: "Candidates", icon: UsersRound, active: false },
-  { label: "Settings", icon: Settings, active: false }
+  { label: "Overview", icon: LayoutDashboard, kind: "link", href: "/dashboard" },
+  { label: "Interviews", icon: MessageSquareText, kind: "anchor", href: "#interview-generator" },
+  { label: "Resume", icon: FileText, kind: "anchor", href: "#resume-upload" },
+  { label: "Goals", icon: Target, kind: "soon" },
+  { label: "Candidates", icon: UsersRound, kind: "soon" },
+  { label: "Settings", icon: Settings, kind: "soon" }
 ] as const;
 
-const stats = [
-  { label: "Mock interviews", value: "24", delta: "+18%", helper: "vs. last month", icon: MessageSquareText },
-  { label: "Average score", value: "82%", delta: "+7 pts", helper: "communication + delivery", icon: TrendingUp },
-  { label: "Resume match", value: "91%", delta: "+12%", helper: "role alignment", icon: FileText },
-  { label: "Offers tracked", value: "3", delta: "+1", helper: "active pipelines", icon: BriefcaseBusiness }
-] as const;
-
-const chartBars = [42, 58, 52, 67, 74, 71, 83, 79, 88, 92, 86, 94] as const;
-const chartLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
-
-const recentInterviews = [
-  { role: "Product Manager", company: "Northstar Labs", date: "Today", score: "88%", status: "Completed" },
-  { role: "Frontend Engineer", company: "Orbital Systems", date: "Yesterday", score: "81%", status: "Reviewed" },
-  { role: "Data Analyst", company: "Metricly", date: "Jun 28", score: "76%", status: "Needs practice" }
-] as const;
-
-const resumeSections = [
-  { label: "Role keywords", value: 92 },
-  { label: "Impact bullets", value: 78 },
-  { label: "Formatting", value: 96 }
-] as const;
-
+// These sections have no backing data model yet (no scheduling, goals, or
+// activity-log feature), so they stay illustrative. Flagged in the UI as
+// sample data rather than presented as if they were real.
 const goals = [
   { label: "Complete 4 mock interviews", value: 75, meta: "3 of 4 done" },
   { label: "Practice behavioral stories", value: 60, meta: "6 of 10 stories" },
@@ -93,22 +73,59 @@ type Interview = {
   questionCount: number;
   questions: InterviewQuestion[];
   createdAt: string;
+  status: string;
+  overallScore: number | null;
 };
+
+type DashboardStats = {
+  totalInterviews: number;
+  completedCount: number;
+  averageScore: number | null;
+  resumesCount: number;
+};
+
+type ChartPoint = { label: string; score: number };
+
+type ResumeSummary = {
+  fileName: string;
+  createdAt: string;
+  sections: Record<string, string[]>;
+} | null;
 
 type DashboardShellProps = {
   displayName: string;
   initialInterviews: Interview[];
+  stats: DashboardStats;
+  chartData: ChartPoint[];
+  resume: ResumeSummary;
 };
 
 function DashboardPanel({ className, children }: React.PropsWithChildren<{ className?: string }>) {
   return <section className={cn("rounded-3xl border border-white/10 bg-card/70 p-5 shadow-2xl shadow-black/20", className)}>{children}</section>;
 }
 
-function SectionHeader({ title, description, action }: { title: string; description?: string; action?: string }) {
+function SectionHeader({
+  title,
+  description,
+  action,
+  sample
+}: {
+  title: string;
+  description?: string;
+  action?: string;
+  sample?: boolean;
+}) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div>
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+          {sample ? (
+            <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-amber-300">
+              Sample data
+            </span>
+          ) : null}
+        </div>
         {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {action ? <button className="text-sm font-medium text-primary transition-colors hover:text-primary/80">{action}</button> : null}
@@ -117,9 +134,10 @@ function SectionHeader({ title, description, action }: { title: string; descript
 }
 
 function ProgressBar({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(100, value));
   return (
-    <div className="h-2 overflow-hidden rounded-full bg-white/10" aria-label={`${value}% complete`}>
-      <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
+    <div className="h-2 overflow-hidden rounded-full bg-white/10" aria-label={`${clamped}% complete`}>
+      <div className="h-full rounded-full bg-primary" style={{ width: `${clamped}%` }} />
     </div>
   );
 }
@@ -137,18 +155,41 @@ function Sidebar() {
       <nav className="mt-6 space-y-1" aria-label="Dashboard navigation">
         {sidebarItems.map((item) => {
           const Icon = item.icon;
+          const isActive = item.label === "Overview";
+
+          if (item.kind === "soon") {
+            return (
+              <span
+                key={item.label}
+                className="flex cursor-not-allowed items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground/50"
+                aria-disabled="true"
+              >
+                <Icon className="size-4" aria-hidden="true" />
+                {item.label}
+                <span className="ml-auto rounded-full bg-white/[0.06] px-2 py-0.5 text-[0.65rem] uppercase tracking-wide">Soon</span>
+              </span>
+            );
+          }
+
+          const className = cn(
+            "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground",
+            isActive && "bg-white/[0.08] text-foreground"
+          );
+
+          if (item.kind === "link") {
+            return (
+              <Link href={item.href} key={item.label} className={className}>
+                <Icon className="size-4" aria-hidden="true" />
+                {item.label}
+              </Link>
+            );
+          }
+
           return (
-            <Link
-              href="#"
-              key={item.label}
-              className={cn(
-                "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground",
-                item.active && "bg-white/[0.08] text-foreground"
-              )}
-            >
+            <a href={item.href} key={item.label} className={className}>
               <Icon className="size-4" aria-hidden="true" />
               {item.label}
-            </Link>
+            </a>
           );
         })}
       </nav>
@@ -182,88 +223,178 @@ function TopNavbar({ displayName }: Pick<DashboardShellProps, "displayName">) {
   );
 }
 
-function StatCard({ stat }: { stat: (typeof stats)[number] }) {
-  const Icon = stat.icon;
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  helper
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  helper: string;
+}) {
   return (
     <DashboardPanel className="p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Icon className="size-5" aria-hidden="true" />
         </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
-          {stat.delta}
-          <ArrowUpRight className="size-3" aria-hidden="true" />
-        </span>
       </div>
-      <p className="mt-5 text-sm text-muted-foreground">{stat.label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{stat.value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{stat.helper}</p>
+      <p className="mt-5 text-sm text-muted-foreground">{label}</p>
+      <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
     </DashboardPanel>
   );
 }
 
-function PerformanceChart() {
+function StatsRow({ stats }: { stats: DashboardStats }) {
+  const inProgress = stats.totalInterviews - stats.completedCount;
+  const items = [
+    {
+      icon: MessageSquareText,
+      label: "Mock interviews",
+      value: String(stats.totalInterviews),
+      helper: `${stats.completedCount} completed`
+    },
+    {
+      icon: TrendingUp,
+      label: "Average score",
+      value: stats.averageScore !== null ? `${stats.averageScore}%` : "—",
+      helper: stats.averageScore !== null ? "across completed interviews" : "complete an interview to see this"
+    },
+    {
+      icon: CheckCircle2,
+      label: "Completed interviews",
+      value: String(stats.completedCount),
+      helper: inProgress > 0 ? `${inProgress} still in progress` : "all caught up"
+    },
+    {
+      icon: FileText,
+      label: "Resumes uploaded",
+      value: String(stats.resumesCount),
+      helper: stats.resumesCount > 0 ? "most recent shown below" : "no resume yet"
+    }
+  ] as const;
+
+  return (
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Statistics cards">
+      {items.map((item) => (
+        <StatCard key={item.label} icon={item.icon} label={item.label} value={item.value} helper={item.helper} />
+      ))}
+    </section>
+  );
+}
+
+function PerformanceChart({ chartData }: { chartData: ChartPoint[] }) {
   return (
     <DashboardPanel className="lg:col-span-2">
-      <SectionHeader title="Performance chart" description="Monthly interview readiness score across practice sessions." action="View report" />
-      <div className="mt-8 flex h-72 items-end gap-2 sm:gap-4" role="img" aria-label="Performance score increased from 42 in January to 94 in December.">
-        {chartBars.map((value, index) => (
-          <div key={chartLabels[index]} className="flex flex-1 flex-col items-center gap-3">
-            <div className="flex h-56 w-full items-end rounded-full bg-white/[0.04] p-1">
-              <div
-                className="w-full rounded-full bg-gradient-to-t from-primary/70 to-cyan-300 shadow-[0_0_24px_-10px_hsl(var(--primary))]"
-                style={{ height: `${value}%` }}
-              />
-            </div>
-            <span className="text-[0.65rem] text-muted-foreground sm:text-xs">{chartLabels[index]}</span>
-          </div>
-        ))}
-      </div>
-    </DashboardPanel>
-  );
-}
-
-function RecentInterviews() {
-  return (
-    <DashboardPanel>
-      <SectionHeader title="Recent interviews" description="Practice and live interview snapshots." action="See all" />
-      <div className="mt-5 space-y-3">
-        {recentInterviews.map((interview) => (
-          <div key={`${interview.role}-${interview.company}`} className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-medium text-foreground">{interview.role}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{interview.company} · {interview.date}</p>
-              </div>
-              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{interview.score}</span>
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">{interview.status}</p>
-          </div>
-        ))}
-      </div>
-    </DashboardPanel>
-  );
-}
-
-function ResumeStatus() {
-  return (
-    <DashboardPanel>
-      <SectionHeader title="Resume status" description="UI-only readiness indicators." />
-      <div className="mt-5 rounded-3xl bg-gradient-to-br from-primary/20 to-purple-400/10 p-5">
-        <div className="flex items-center justify-between">
-          <ShieldCheck className="size-8 text-primary" aria-hidden="true" />
-          <span className="text-3xl font-semibold text-foreground">91%</span>
+      <SectionHeader title="Performance chart" description="Score for each interview you've completed, most recent last." />
+      {chartData.length < 2 ? (
+        <div className="mt-8 flex h-72 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+          <TrendingUp className="size-6" aria-hidden="true" />
+          <p className="text-sm">Complete at least two interviews to see your score trend here.</p>
         </div>
-        <p className="mt-4 font-medium text-foreground">Strong match for target roles</p>
-        <p className="mt-1 text-sm text-muted-foreground">Add one leadership metric to polish your executive summary.</p>
+      ) : (
+        <div
+          className="mt-8 flex h-72 items-end gap-2 sm:gap-4"
+          role="img"
+          aria-label={`Performance score across ${chartData.length} completed interviews.`}
+        >
+          {chartData.map((point, index) => (
+            <div key={`${point.label}-${index}`} className="flex flex-1 flex-col items-center gap-3">
+              <div className="flex h-56 w-full items-end rounded-full bg-white/[0.04] p-1">
+                <div
+                  className="w-full rounded-full bg-gradient-to-t from-primary/70 to-cyan-300 shadow-[0_0_24px_-10px_hsl(var(--primary))]"
+                  style={{ height: `${Math.max(4, point.score)}%` }}
+                />
+              </div>
+              <span className="text-[0.65rem] text-muted-foreground sm:text-xs">{point.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </DashboardPanel>
+  );
+}
+
+function statusLabel(interview: Interview) {
+  if (interview.status === "completed") return interview.overallScore !== null ? `${interview.overallScore}%` : "Completed";
+  if (interview.status === "in_progress") return "In progress";
+  return "Not started";
+}
+
+function RecentInterviews({ interviews }: { interviews: Interview[] }) {
+  return (
+    <DashboardPanel>
+      <SectionHeader title="Recent interviews" description="Your latest generated practice sessions." />
+      <div className="mt-5 space-y-3">
+        {interviews.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm text-muted-foreground">
+            No interviews yet. Generate one below to get started.
+          </p>
+        ) : (
+          interviews.map((interview) => (
+            <Link
+              key={interview.id}
+              href={`/dashboard/interviews/${interview.id}`}
+              className="block rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition-colors hover:border-primary/40 hover:bg-white/[0.05]"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium text-foreground">{interview.role}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {interview.company} ·{" "}
+                    {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(interview.createdAt))}
+                  </p>
+                </div>
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                  {statusLabel(interview)}
+                </span>
+              </div>
+            </Link>
+          ))
+        )}
       </div>
+    </DashboardPanel>
+  );
+}
+
+function ResumeStatus({ resume }: { resume: ResumeSummary }) {
+  if (!resume) {
+    return (
+      <DashboardPanel>
+        <SectionHeader title="Resume status" description="Upload a resume to see extraction results here." />
+        <div className="mt-5 rounded-3xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+          <ShieldCheck className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
+          <p className="mt-3 text-sm text-muted-foreground">No resume uploaded yet.</p>
+          <a href="#resume-upload" className="mt-3 inline-block text-sm font-medium text-primary hover:text-primary/80">
+            Upload one now
+          </a>
+        </div>
+      </DashboardPanel>
+    );
+  }
+
+  const sectionEntries = Object.entries(resume.sections);
+  const uploadedAt = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(resume.createdAt));
+
+  return (
+    <DashboardPanel>
+      <SectionHeader title="Resume status" description={`${resume.fileName} · uploaded ${uploadedAt}`} />
       <div className="mt-5 space-y-4">
-        {resumeSections.map((section) => (
-          <div key={section.label}>
-            <div className="mb-2 flex justify-between text-sm"><span>{section.label}</span><span className="text-muted-foreground">{section.value}%</span></div>
-            <ProgressBar value={section.value} />
-          </div>
-        ))}
+        {sectionEntries.map(([label, items]) => {
+          const coverage = Math.min(100, items.length * 25);
+          return (
+            <div key={label}>
+              <div className="mb-2 flex justify-between text-sm">
+                <span className="capitalize">{label}</span>
+                <span className="text-muted-foreground">{items.length} item{items.length === 1 ? "" : "s"} found</span>
+              </div>
+              <ProgressBar value={coverage} />
+            </div>
+          );
+        })}
       </div>
     </DashboardPanel>
   );
@@ -272,7 +403,7 @@ function ResumeStatus() {
 function Goals() {
   return (
     <DashboardPanel>
-      <SectionHeader title="Goals" description="Keep your preparation on track." />
+      <SectionHeader title="Goals" description="Keep your preparation on track." sample />
       <div className="mt-5 space-y-4">
         {goals.map((goal) => (
           <div key={goal.label} className="space-y-2">
@@ -291,7 +422,7 @@ function Goals() {
 function UpcomingInterviews() {
   return (
     <DashboardPanel>
-      <SectionHeader title="Upcoming interviews" description="Your next scheduled conversations." action="Manage" />
+      <SectionHeader title="Upcoming interviews" description="Your next scheduled conversations." sample />
       <div className="mt-5 space-y-3">
         {upcomingInterviews.map((interview) => (
           <div key={`${interview.role}-${interview.company}`} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
@@ -312,7 +443,7 @@ function UpcomingInterviews() {
 function ActivityFeed() {
   return (
     <DashboardPanel>
-      <SectionHeader title="Activity feed" description="Recent workspace updates." />
+      <SectionHeader title="Activity feed" description="Recent workspace updates." sample />
       <div className="mt-5 space-y-5">
         {activityFeed.map((activity) => {
           const Icon = activity.icon;
@@ -331,7 +462,7 @@ function ActivityFeed() {
   );
 }
 
-export function DashboardShell({ displayName, initialInterviews }: DashboardShellProps) {
+export function DashboardShell({ displayName, initialInterviews, stats, chartData, resume }: DashboardShellProps) {
   return (
     <main className="min-h-[calc(100vh-4rem)] overflow-hidden">
       <div className="mx-auto flex max-w-[1600px]">
@@ -339,21 +470,19 @@ export function DashboardShell({ displayName, initialInterviews }: DashboardShel
         <div className="min-w-0 flex-1">
           <TopNavbar displayName={displayName} />
           <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Statistics cards">
-              {stats.map((stat) => <StatCard key={stat.label} stat={stat} />)}
-            </section>
+            <StatsRow stats={stats} />
 
             <InterviewGenerator initialInterviews={initialInterviews} />
 
             <ResumeUpload />
 
             <section className="grid gap-6 xl:grid-cols-3">
-              <PerformanceChart />
-              <RecentInterviews />
+              <PerformanceChart chartData={chartData} />
+              <RecentInterviews interviews={initialInterviews} />
             </section>
 
             <section className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4">
-              <ResumeStatus />
+              <ResumeStatus resume={resume} />
               <Goals />
               <UpcomingInterviews />
               <ActivityFeed />

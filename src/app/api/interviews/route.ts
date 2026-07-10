@@ -125,7 +125,6 @@ NO text after JSON.
 
     const raw = response.text ?? "";
 
-   
     const start = raw.indexOf("{");
     const end = raw.lastIndexOf("}");
 
@@ -151,9 +150,6 @@ NO text after JSON.
         { status: 500 }
       );
     }
-
-    console.log("\n========== PARSED ==========");
-    console.dir(parsedJson, { depth: null });
 
     const validated =
       generatedInterviewSchema.safeParse(parsedJson);
