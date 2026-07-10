@@ -301,13 +301,13 @@ export function DashboardShell({
           <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <StatsRow stats={stats} />
 
-            <InterviewGenerator initialInterviews={initialInterviews} />
+            <InterviewGenerator initialInterviews={initialInterviews} initialTotal={stats.totalInterviews} />
 
             <ResumeUpload />
 
             <section className="grid gap-6 xl:grid-cols-3">
               <PerformanceChart chartData={chartData} />
-              <RecentInterviews interviews={initialInterviews} />
+              <RecentInterviews interviews={initialInterviews} initialTotal={stats.totalInterviews} />
             </section>
 
             <section id="goals" className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-4 scroll-mt-24">

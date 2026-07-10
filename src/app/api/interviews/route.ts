@@ -33,7 +33,10 @@ const generatedInterviewSchema = z.object({
   questions: z.array(generatedQuestionSchema),
 });
 
-export async function GET() {
+const DEFAULT_PAGE_SIZE = 6;
+const MAX_PAGE_SIZE = 50;
+
+export async function GET(request: Request) {
   const { userId } = await auth();
 
   if (!userId) {
@@ -43,13 +46,29 @@ export async function GET() {
     );
   }
 
-  const interviews = await prisma.interview.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  });
+  const { searchParams } = new URL(request.url);
 
-  return NextResponse.json({ interviews });
+  const rawTake = Number(searchParams.get("take"));
+  const rawSkip = Number(searchParams.get("skip"));
+
+  const take =
+    Number.isFinite(rawTake) && rawTake > 0
+      ? Math.min(Math.trunc(rawTake), MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
+
+  const skip = Number.isFinite(rawSkip) && rawSkip > 0 ? Math.trunc(rawSkip) : 0;
+
+  const [interviews, total] = await Promise.all([
+    prisma.interview.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.interview.count({ where: { userId } }),
+  ]);
+
+  return NextResponse.json({ interviews, total, skip, take });
 }
 
 export async function POST(request: Request) {

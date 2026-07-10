@@ -65,7 +65,7 @@ export default async function InterviewsPage() {
         </div>
 
         <div className="mt-6 space-y-6">
-          <InterviewGenerator initialInterviews={recentForGenerator} />
+          <InterviewGenerator initialInterviews={recentForGenerator} initialTotal={interviews.length} />
           <InterviewHistoryList interviews={allForHistory} />
         </div>
       </div>

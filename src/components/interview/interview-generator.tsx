@@ -30,6 +30,7 @@ type Interview = {
 
 type InterviewGeneratorProps = {
   initialInterviews: Interview[];
+  initialTotal?: number;
 };
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -99,14 +100,19 @@ function InterviewCard({ interview }: { interview: Interview }) {
   );
 }
 
-export function InterviewGenerator({ initialInterviews }: InterviewGeneratorProps) {
+export function InterviewGenerator({ initialInterviews, initialTotal }: InterviewGeneratorProps) {
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [difficulty, setDifficulty] = useState<(typeof difficulties)[number]>("Intermediate");
   const [questionCount, setQuestionCount] = useState(5);
   const [interviews, setInterviews] = useState(initialInterviews);
+  const [total, setTotal] = useState(initialTotal ?? initialInterviews.length);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
+  const hasMore = interviews.length < total;
 
   async function generateInterview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,7 +132,32 @@ export function InterviewGenerator({ initialInterviews }: InterviewGeneratorProp
       return;
     }
 
-    setInterviews((current) => [payload.interview, ...current].slice(0, 6));
+    setInterviews((current) => [payload.interview, ...current]);
+    setTotal((current) => current + 1);
+  }
+
+  async function loadMore() {
+    setIsLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const response = await fetch(`/api/interviews?skip=${interviews.length}&take=6`);
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setLoadMoreError(payload.error ?? "Could not load more interviews.");
+        return;
+      }
+
+      setInterviews((current) => [...current, ...payload.interviews]);
+      if (typeof payload.total === "number") {
+        setTotal(payload.total);
+      }
+    } catch {
+      setLoadMoreError("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setIsLoadingMore(false);
+    }
   }
 
   return (
@@ -184,6 +215,20 @@ export function InterviewGenerator({ initialInterviews }: InterviewGeneratorProp
           </div>
         )}
       </div>
+
+      {loadMoreError ? <p className="mt-4 text-sm text-red-300">{loadMoreError}</p> : null}
+
+      {hasMore ? (
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <Button type="button" variant="outline" onClick={loadMore} disabled={isLoadingMore}>
+            {isLoadingMore ? <Loader2 className="animate-spin" /> : null}
+            {isLoadingMore ? "Loading..." : "Load more"}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Showing {interviews.length} of {total} interview{total === 1 ? "" : "s"}
+          </p>
+        </div>
+      ) : null}
     </section>
   );
 }

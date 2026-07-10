@@ -31,11 +31,46 @@ function DashboardPanel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function RecentInterviews({ interviews: initialInterviews }: { interviews: RecentInterview[] }) {
+export function RecentInterviews({
+  interviews: initialInterviews,
+  initialTotal
+}: {
+  interviews: RecentInterview[];
+  initialTotal?: number;
+}) {
   const [interviews, setInterviews] = useState(initialInterviews);
+  const [total, setTotal] = useState(initialTotal ?? initialInterviews.length);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+
+  const hasMore = interviews.length < total;
+
+  async function loadMore() {
+    setIsLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const response = await fetch(`/api/interviews?skip=${interviews.length}&take=6`);
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setLoadMoreError(payload.error ?? "Could not load more interviews.");
+        return;
+      }
+
+      setInterviews((current) => [...current, ...payload.interviews]);
+      if (typeof payload.total === "number") {
+        setTotal(payload.total);
+      }
+    } catch {
+      setLoadMoreError("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   async function deleteInterview(id: string) {
     setPendingId(id);
@@ -51,6 +86,7 @@ export function RecentInterviews({ interviews: initialInterviews }: { interviews
       }
 
       setInterviews((current) => current.filter((interview) => interview.id !== id));
+      setTotal((current) => Math.max(0, current - 1));
     } catch {
       setError("Could not reach the server. Check your connection and try again.");
     } finally {
@@ -135,6 +171,25 @@ export function RecentInterviews({ interviews: initialInterviews }: { interviews
           })
         )}
       </div>
+
+      {loadMoreError ? <p className="mt-3 text-sm text-red-300">{loadMoreError}</p> : null}
+
+      {hasMore ? (
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-white/20 hover:text-foreground disabled:opacity-60"
+          >
+            {isLoadingMore ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            {isLoadingMore ? "Loading..." : "Load more"}
+          </button>
+          <p className="text-xs text-muted-foreground">
+            Showing {interviews.length} of {total} interview{total === 1 ? "" : "s"}
+          </p>
+        </div>
+      ) : null}
     </DashboardPanel>
   );
 }
