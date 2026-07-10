@@ -21,8 +21,6 @@ import { GoalsPanel, type Goal } from "@/components/dashboard/goals-panel";
 import { RecentInterviews } from "@/components/dashboard/recent-interviews";
 import { ResumeStatus } from "@/components/dashboard/resume-status";
 import { UpcomingInterviewsPanel, type ScheduledInterview } from "@/components/dashboard/upcoming-interviews-panel";
-import { InterviewGenerator } from "@/components/interview/interview-generator";
-import { ResumeUpload } from "@/components/resume/resume-upload";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -300,10 +298,6 @@ export function DashboardShell({
           <TopNavbar displayName={displayName} />
           <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <StatsRow stats={stats} />
-
-            <InterviewGenerator initialInterviews={initialInterviews} initialTotal={stats.totalInterviews} />
-
-            <ResumeUpload />
 
             <section className="grid gap-6 xl:grid-cols-3">
               <PerformanceChart chartData={chartData} />
