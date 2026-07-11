@@ -2,22 +2,21 @@ import type * as React from "react";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
-  Bell,
   CheckCircle2,
   FileText,
   Home,
   LayoutDashboard,
   MessageSquareText,
-  Search,
   Settings,
   Target,
   TrendingUp,
-  Upload,
-  UsersRound
+  Upload
 } from "lucide-react";
 
 import { ActivityFeedPanel, type ActivityEvent } from "@/components/dashboard/activity-feed-panel";
+import { DashboardSearch } from "@/components/dashboard/dashboard-search";
 import { GoalsPanel, type Goal } from "@/components/dashboard/goals-panel";
+import { NotificationsDropdown } from "@/components/dashboard/notifications-dropdown";
 import { RecentInterviews } from "@/components/dashboard/recent-interviews";
 import { ResumeStatus } from "@/components/dashboard/resume-status";
 import { UpcomingInterviewsPanel, type ScheduledInterview } from "@/components/dashboard/upcoming-interviews-panel";
@@ -29,8 +28,7 @@ const sidebarItems = [
   { label: "Interviews", icon: MessageSquareText, kind: "link", href: "/dashboard/interviews" },
   { label: "Resume", icon: FileText, kind: "link", href: "/dashboard/resume" },
   { label: "Goals", icon: Target, kind: "anchor", href: "#goals" },
-  { label: "Candidates", icon: UsersRound, kind: "soon" },
-  { label: "Settings", icon: Settings, kind: "soon" }
+  { label: "Settings", icon: Settings, kind: "link", href: "/dashboard/settings" }
 ] as const;
 
 type InterviewQuestion = {
@@ -119,20 +117,6 @@ function Sidebar() {
           const Icon = item.icon;
           const isActive = item.label === "Overview";
 
-          if (item.kind === "soon") {
-            return (
-              <span
-                key={item.label}
-                className="flex cursor-not-allowed items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground/50"
-                aria-disabled="true"
-              >
-                <Icon className="size-4" aria-hidden="true" />
-                {item.label}
-                <span className="ml-auto rounded-full bg-white/[0.06] px-2 py-0.5 text-[0.65rem] uppercase tracking-wide">Soon</span>
-              </span>
-            );
-          }
-
           const className = cn(
             "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.06] hover:text-foreground",
             isActive && "bg-white/[0.08] text-foreground"
@@ -159,7 +143,7 @@ function Sidebar() {
   );
 }
 
-function TopNavbar({ displayName }: Pick<DashboardShellProps, "displayName">) {
+function TopNavbar({ displayName, initialActivity }: Pick<DashboardShellProps, "displayName" | "initialActivity">) {
   return (
     <header className="flex flex-col gap-4 border-b border-white/10 bg-background/30 px-4 py-5 backdrop-blur lg:flex-row lg:items-center lg:justify-between lg:px-8">
       <div>
@@ -167,13 +151,8 @@ function TopNavbar({ displayName }: Pick<DashboardShellProps, "displayName">) {
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Dashboard</h1>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="flex h-11 min-w-0 items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm text-muted-foreground sm:w-72">
-          <Search className="size-4 shrink-0" aria-hidden="true" />
-          <span className="truncate">Search interviews, resumes, goals...</span>
-        </label>
-        <Button variant="outline" size="icon" aria-label="Notifications">
-          <Bell className="size-4" aria-hidden="true" />
-        </Button>
+        <DashboardSearch />
+        <NotificationsDropdown initialActivity={initialActivity} />
         <Button asChild>
           <Link href="/dashboard/resume">
             <Upload aria-hidden="true" />
@@ -295,7 +274,7 @@ export function DashboardShell({
       <div className="mx-auto flex max-w-[1600px]">
         <Sidebar />
         <div className="min-w-0 flex-1">
-          <TopNavbar displayName={displayName} />
+          <TopNavbar displayName={displayName} initialActivity={initialActivity} />
           <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <StatsRow stats={stats} />
 
