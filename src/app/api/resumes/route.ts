@@ -12,7 +12,9 @@ import {
 } from "@/lib/resume-parser";
 
 const bucketName =
-  process.env.SUPABASE_STORAGE_BUCKET ?? "interviewiq";
+  process.env.SUPABASE_STORAGE_BUCKET ??
+  process.env.SUPABASE_RESUME_BUCKET ??
+  "interviewiq";
 
 export async function GET() {
   const { userId } = await auth();
@@ -82,49 +84,40 @@ export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceRole) {
-    return NextResponse.json(
-      {
-        error: "Supabase is not configured.",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
-
-  const supabase = createClient(
-    supabaseUrl,
-    serviceRole,
-    {
-      auth: {
-        persistSession: false,
-      },
-    }
-  );
-
   const storagePath =
     `${userId}/${crypto.randomUUID()}-${file.name.replace(
       /[^a-zA-Z0-9._-]/g,
       "-"
     )}`;
 
-  const upload = await supabase.storage
-    .from(bucketName)
-    .upload(storagePath, file, {
-      contentType: file.type,
-      upsert: false,
-    });
+  // Best-effort storage upload: if Supabase Storage is paused, has an invalid URL,
+  // or is unreachable, we log a warning and proceed with in-memory parsing
+  // and saving to Postgres so the candidate is never blocked from generating interviews.
+  if (supabaseUrl && serviceRole) {
+    try {
+      const supabase = createClient(
+        supabaseUrl,
+        serviceRole,
+        {
+          auth: {
+            persistSession: false,
+          },
+        }
+      );
 
-  if (upload.error) {
-    return NextResponse.json(
-      {
-        error: upload.error.message,
-      },
-      {
-        status: 500,
+      const upload = await supabase.storage
+        .from(bucketName)
+        .upload(storagePath, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (upload.error) {
+        console.warn("Supabase storage upload warning (proceeding with parsing):", upload.error.message);
       }
-    );
+    } catch (storageErr) {
+      console.warn("Supabase storage upload error (proceeding with parsing):", storageErr);
+    }
   }
 
   //--------------------------------------------------
