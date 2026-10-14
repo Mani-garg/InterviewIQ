@@ -10,6 +10,7 @@ type InterviewQuestion = {
   intent: string;
   strongAnswerSignals: string[];
   followUps: string[];
+  resumeReference?: string;
 };
 
 export default async function InterviewSessionPage({ params }: { params: Promise<{ id: string }> }) {

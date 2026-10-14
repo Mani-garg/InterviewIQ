@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { FileText, Loader2, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { FileText, Loader2, Sparkles, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { ParsedResumeSections } from "@/lib/resume-parser";
@@ -96,6 +97,15 @@ export function ResumeHistoryList({ resumes: initialResumes }: { resumes: Histor
                             {label}: {items.length}
                           </span>
                         ))}
+                      </div>
+                      <div className="mt-3 flex items-center gap-3">
+                        <Link
+                          href={`/dashboard/interviews?resumeId=${resume.id}`}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/20"
+                        >
+                          <Sparkles className="size-3.5" />
+                          Start tailored interview
+                        </Link>
                       </div>
                     </div>
                   </div>

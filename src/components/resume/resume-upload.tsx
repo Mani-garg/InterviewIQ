@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Loader2, UploadCloud, X } from "lucide-react";
+import Link from "next/link";
+import { FileText, Loader2, Sparkles, UploadCloud, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -155,6 +156,27 @@ export function ResumeUpload() {
           </Button>
           {file ? <Button variant="outline" onClick={() => { setFile(null); setResume(null); setError(null); if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }}><X /> Clear</Button> : null}
         </div>
+
+        {resume ? (
+          <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/10 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <Sparkles className="size-4 text-primary" />
+                  Ready to test your skills?
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Generate mock interview questions tailored directly to this resume.
+                </p>
+              </div>
+              <Button asChild size="sm">
+                <Link href={`/dashboard/interviews?resumeId=${resume.id}`}>
+                  Practice with this resume
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-1">

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Loader2, ShieldCheck, Trash2 } from "lucide-react";
+import { Loader2, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type ResumeSummary = {
@@ -139,6 +140,15 @@ export function ResumeStatus({ resume: initialResume }: { resume: ResumeSummary 
             </div>
           );
         })}
+      </div>
+
+      <div className="mt-5 pt-3 border-t border-white/10">
+        <Button asChild size="sm" className="w-full">
+          <Link href={`/dashboard/interviews?resumeId=${resume.id}`}>
+            <Sparkles className="size-3.5 mr-1.5" />
+            Generate tailored interview
+          </Link>
+        </Button>
       </div>
     </DashboardPanel>
   );

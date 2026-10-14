@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock3,
+  FileText,
   Flag,
   Loader2,
   Mic,
@@ -25,6 +26,7 @@ type InterviewQuestion = {
   intent: string;
   strongAnswerSignals: string[];
   followUps: string[];
+  resumeReference?: string;
 };
 
 type InitialAnswer = {
@@ -312,7 +314,15 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
                 <div key={`${question.question}-${index}`} className="rounded-3xl border border-white/10 bg-card/70 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-primary">{question.category}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-primary">{question.category}</span>
+                        {question.resumeReference ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+                            <FileText className="size-3" />
+                            {question.resumeReference}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-3 text-lg font-semibold leading-7 text-foreground">{question.question}</p>
                     </div>
                     {result?.score !== null && result?.score !== undefined ? (
@@ -398,7 +408,21 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
           <article className="rounded-3xl border border-white/10 bg-card/70 p-5 shadow-2xl shadow-black/20">
             {isHydrating ? <div className="flex min-h-96 items-center justify-center text-muted-foreground"><Loader2 className="mr-2 size-5 animate-spin" /> Loading session...</div> : (
               <div className="space-y-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{currentQuestion.category}</span><h2 className="mt-4 text-2xl font-semibold leading-9 text-foreground">{currentQuestion.question}</h2></div><span className="text-sm text-muted-foreground">{currentIndex + 1}/{interview.questions.length}</span></div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{currentQuestion.category}</span>
+                      {currentQuestion.resumeReference ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
+                          <FileText className="size-3.5" />
+                          {currentQuestion.resumeReference}
+                        </span>
+                      ) : null}
+                    </div>
+                    <h2 className="mt-4 text-2xl font-semibold leading-9 text-foreground">{currentQuestion.question}</h2>
+                  </div>
+                  <span className="text-sm text-muted-foreground">{currentIndex + 1}/{interview.questions.length}</span>
+                </div>
                 <div className="grid gap-3 md:grid-cols-2"><div className="rounded-2xl bg-white/[0.035] p-4"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Intent</p><p className="mt-2 text-sm leading-6">{currentQuestion.intent}</p></div><div className="rounded-2xl bg-white/[0.035] p-4"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Follow-ups</p><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{currentQuestion.followUps.map((followUp) => <li key={followUp}>• {followUp}</li>)}</ul></div></div>
                 <label className="block"><span className="text-sm font-semibold text-foreground">Your answer</span><textarea value={answers[currentIndex]} onChange={(event) => updateAnswer(event.target.value)} placeholder="Type your structured answer here. It autosaves as you write." className="mt-3 min-h-64 w-full resize-y rounded-3xl border border-white/10 bg-background/70 p-4 text-sm leading-6 outline-none transition focus:border-primary/60" /></label>
                 <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><Button type="button" variant="outline" onClick={toggleVoice} disabled={!voiceSupported}>{isListening ? <MicOff /> : <Mic />}{isListening ? "Stop voice" : "Voice input"}</Button>{!voiceSupported ? <p className="text-sm text-muted-foreground">Voice input is unavailable in this browser.</p> : null}<div className="flex gap-2"><Button type="button" variant="outline" disabled={currentIndex === 0} onClick={() => { setConfirmingFinish(false); setCurrentIndex((index) => Math.max(0, index - 1)); }}><ChevronLeft /> Previous</Button><Button type="button" disabled={currentIndex === interview.questions.length - 1} onClick={() => { setConfirmingFinish(false); setCurrentIndex((index) => Math.min(interview.questions.length - 1, index + 1)); }}>Next <ChevronRight /></Button></div></div>

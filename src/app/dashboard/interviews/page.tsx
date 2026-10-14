@@ -12,18 +12,31 @@ type InterviewQuestion = {
   intent: string;
   strongAnswerSignals: string[];
   followUps: string[];
+  resumeReference?: string;
 };
 
 export default async function InterviewsPage() {
   const user = await currentUser();
   const userId = user?.id;
 
-  const interviews = userId
-    ? await prisma.interview.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
+  const [interviews, userResumes] = userId
+    ? await Promise.all([
+        prisma.interview.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" }
+        }),
+        prisma.resume.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            fileName: true,
+            createdAt: true,
+            sections: true
+          }
+        })
+      ])
+    : [[], []];
 
   const recentForGenerator = interviews.slice(0, 6).map((interview) => ({
     id: interview.id,
@@ -65,7 +78,16 @@ export default async function InterviewsPage() {
         </div>
 
         <div className="mt-6 space-y-6">
-          <InterviewGenerator initialInterviews={recentForGenerator} initialTotal={interviews.length} />
+          <InterviewGenerator
+            initialInterviews={recentForGenerator}
+            initialTotal={interviews.length}
+            userResumes={userResumes.map((resume) => ({
+              id: resume.id,
+              fileName: resume.fileName,
+              createdAt: resume.createdAt.toISOString(),
+              sections: resume.sections as Record<string, string[]>
+            }))}
+          />
           <InterviewHistoryList interviews={allForHistory} />
         </div>
       </div>

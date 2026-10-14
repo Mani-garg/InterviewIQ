@@ -37,6 +37,7 @@ type InterviewQuestion = {
   intent: string;
   strongAnswerSignals: string[];
   followUps: string[];
+  resumeReference?: string;
 };
 
 type Interview = {

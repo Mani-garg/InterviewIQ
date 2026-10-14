@@ -19,6 +19,7 @@ const requestSchema = z.object({
   role: z.string().trim().min(2).max(80),
   difficulty: z.enum(difficulties),
   questionCount: z.coerce.number().int().min(3).max(12),
+  resumeId: z.string().trim().optional().nullable(),
 });
 
 const generatedQuestionSchema = z.object({
@@ -27,6 +28,7 @@ const generatedQuestionSchema = z.object({
   intent: z.string(),
   strongAnswerSignals: z.array(z.string()),
   followUps: z.array(z.string()),
+  resumeReference: z.string().optional().nullable(),
 });
 
 const generatedInterviewSchema = z.object({
@@ -117,7 +119,67 @@ export async function POST(request: Request) {
       );
     }
 
-    const { company, role, difficulty, questionCount } = parsed.data;
+    const { company, role, difficulty, questionCount, resumeId } = parsed.data;
+
+    let resumeContextPrompt = "";
+    let resumeLogDetails = "";
+
+    if (resumeId) {
+      const resume = await prisma.resume.findFirst({
+        where: { id: resumeId, userId },
+      });
+
+      if (resume) {
+        const sections = (resume.sections ?? {}) as {
+          skills?: string[];
+          projects?: string[];
+          experience?: string[];
+          education?: string[];
+        };
+
+        const skillsStr = Array.isArray(sections.skills) && sections.skills.length > 0
+          ? sections.skills.join(", ")
+          : "Not specified";
+
+        const projectsStr = Array.isArray(sections.projects) && sections.projects.length > 0
+          ? sections.projects.map((p) => `- ${typeof p === "string" ? p : JSON.stringify(p)}`).join("\n")
+          : "Not specified";
+
+        const experienceStr = Array.isArray(sections.experience) && sections.experience.length > 0
+          ? sections.experience.map((e) => `- ${typeof e === "string" ? e : JSON.stringify(e)}`).join("\n")
+          : "Not specified";
+
+        const educationStr = Array.isArray(sections.education) && sections.education.length > 0
+          ? sections.education.map((e) => (typeof e === "string" ? e : JSON.stringify(e))).join(", ")
+          : "Not specified";
+
+        const rawExcerpt = resume.extractedText
+          ? resume.extractedText.slice(0, 1500).replace(/\s+/g, " ").trim()
+          : "";
+
+        resumeLogDetails = ` with resume "${resume.fileName}"`;
+
+        resumeContextPrompt = `
+CANDIDATE'S RESUME & BACKGROUND:
+Resume File: ${resume.fileName}
+Skills: ${skillsStr}
+Projects:
+${projectsStr}
+Experience:
+${experienceStr}
+Education: ${educationStr}
+${rawExcerpt ? `Resume Excerpt:\n${rawExcerpt}\n` : ""}
+
+CRITICAL INSTRUCTIONS FOR RESUME INTEGRATION:
+You MUST heavily personalize this interview based on the candidate's actual resume data above, while evaluating them for the role of ${role} at ${company} (${difficulty} level).
+1. Formulate questions that directly probe their listed projects, technologies, and claimed accomplishments (e.g. asking how they built a specific feature, solved architecture bottlenecks, or handled real-world constraints in their previous work).
+2. Connect their past experience with ${company}'s domain and the expectations for a ${role}.
+3. Test their depth on their declared core skills and technical stack.
+4. For every question that relates to their resume, set "resumeReference" to a short, informative label (e.g. "Referencing: Next.js & GraphQL in E-commerce project" or "Based on your 2 years backend experience"). If a question is a general role inquiry, "resumeReference" can be null.
+5. In question "category", clearly indicate relevance (e.g., "Resume Deep-Dive", "Technical (Resume-Aligned)", "Architecture & Projects", "Behavioral (Experience-Based)").
+`;
+      }
+    }
 
     const ai = new GoogleGenAI({
       apiKey: process.env.GEMINI_API_KEY,
@@ -139,16 +201,18 @@ Return ONLY valid JSON.
       "followUps":[
         "...",
         "..."
-      ]
+      ],
+      "resumeReference":"Referencing: ..."
     }
   ]
 }
 
 Generate exactly ${questionCount} interview questions.
 
-Company: ${company}
-Role: ${role}
-Difficulty: ${difficulty}
+Target Company: ${company}
+Target Role: ${role}
+Difficulty Level: ${difficulty}
+${resumeContextPrompt}
 
 NO markdown.
 NO explanation.
@@ -220,7 +284,7 @@ NO text after JSON.
     await logActivity(
       userId,
       "interview_generated",
-      `Generated a ${difficulty.toLowerCase()} ${role} interview for ${company}.`
+      `Generated a ${difficulty.toLowerCase()} ${role} interview for ${company}${resumeLogDetails}.`
     );
 
     return NextResponse.json({ interview });
