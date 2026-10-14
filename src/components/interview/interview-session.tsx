@@ -4,16 +4,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Bot,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
   FileText,
   Flag,
+  Headphones,
   Loader2,
   Mic,
   MicOff,
+  Radio,
   Save,
+  Sparkles,
+  Volume2,
+  VolumeX,
   Wifi
 } from "lucide-react";
 
@@ -109,6 +115,17 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
   const [voiceSupported, setVoiceSupported] = useState(true);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [autoReadQuestions, setAutoReadQuestions] = useState(true);
+  const [autoListenAfterQuestion, setAutoListenAfterQuestion] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [ttsSupported, setTtsSupported] = useState(true);
+
+  const autoListenRef = useRef(autoListenAfterQuestion);
+  useEffect(() => {
+    autoListenRef.current = autoListenAfterQuestion;
+  }, [autoListenAfterQuestion]);
+
   const [isCompleted, setIsCompleted] = useState(interview.status === "completed");
   const [overallScore, setOverallScore] = useState<number | null>(interview.overallScore);
   const [results, setResults] = useState<InitialAnswer[]>(initialAnswers);
@@ -119,6 +136,24 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
   const currentQuestion = interview.questions[currentIndex];
   const answeredCount = answers.filter((answer) => answer.trim().length > 0).length;
   const progress = Math.round(((currentIndex + 1) / interview.questions.length) * 100);
+
+  // Check TTS voice support
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setTtsSupported(false);
+      return;
+    }
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, []);
 
   // Hydrate the timer/current-question position from a local draft (UI
   // convenience only - answer text itself comes from the server via props).
@@ -212,8 +247,131 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
     recognition.onend = () => setIsListening(false);
     recognition.onerror = () => setIsListening(false);
     recognitionRef.current = recognition;
-    return () => recognition.stop();
+    return () => {
+      try {
+        recognition.stop();
+      } catch {}
+    };
   }, [currentIndex, isCompleted]);
+
+  const stopSpeaking = useCallback(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+  }, []);
+
+  const stopListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.stop();
+    } catch {}
+    setIsListening(false);
+  }, []);
+
+  const startListening = useCallback(() => {
+    if (!recognitionRef.current) return;
+    stopSpeaking();
+    setHasUserInteracted(true);
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch {
+      setIsListening(true);
+    }
+  }, [stopSpeaking]);
+
+  const speakQuestion = useCallback((indexToSpeak: number) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const targetQuestion = interview.questions[indexToSpeak];
+    if (!targetQuestion) return;
+
+    // Pause mic while agent speaks so it doesn't transcribe itself
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+      setIsListening(false);
+    }
+
+    window.speechSynthesis.cancel();
+
+    const resumeContext = targetQuestion.resumeReference
+      ? `Regarding your experience with ${targetQuestion.resumeReference}. `
+      : "";
+    const speechText = `Question ${indexToSpeak + 1}. ${resumeContext}${targetQuestion.question}`;
+
+    const utterance = new SpeechSynthesisUtterance(speechText);
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const naturalVoice =
+      voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Google") ||
+            v.name.includes("Natural") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("US") ||
+            v.name.includes("English"))
+      ) || voices.find((v) => v.lang.startsWith("en"));
+
+    if (naturalVoice) {
+      utterance.voice = naturalVoice;
+    }
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      // Auto-start microphone if enabled
+      if (autoListenRef.current && recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch {
+          setIsListening(true);
+        }
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  }, [interview.questions]);
+
+  const speakCurrentQuestion = useCallback(() => {
+    speakQuestion(currentIndex);
+  }, [speakQuestion, currentIndex]);
+
+  // Auto-read question on question transition once user has interacted
+  useEffect(() => {
+    if (isCompleted || isHydrating) return;
+    if (autoReadQuestions && hasUserInteracted) {
+      const timer = window.setTimeout(() => {
+        speakQuestion(currentIndex);
+      }, 350);
+      return () => {
+        window.clearTimeout(timer);
+        stopSpeaking();
+      };
+    }
+  }, [currentIndex, autoReadQuestions, hasUserInteracted, isCompleted, isHydrating, speakQuestion, stopSpeaking]);
+
+  // Cleanup speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const autosaveLabel = useMemo(() => {
     if (isHydrating) return "Loading draft...";
@@ -230,15 +388,15 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
   function toggleVoice() {
     if (!recognitionRef.current) return;
     if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
+      stopListening();
     } else {
-      recognitionRef.current.start();
-      setIsListening(true);
+      startListening();
     }
   }
 
   async function finishInterview() {
+    stopSpeaking();
+    stopListening();
     setIsFinishing(true);
     setFinishError(null);
 
@@ -374,7 +532,16 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
             <p className="mb-3 text-sm font-semibold text-foreground">Questions</p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
               {interview.questions.map((question, index) => (
-                <button key={`${question.question}-${index}`} onClick={() => setCurrentIndex(index)} className={cn("rounded-2xl border p-3 text-left text-sm transition", index === currentIndex ? "border-primary/50 bg-primary/10 text-foreground" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground")}>
+                <button
+                  key={`${question.question}-${index}`}
+                  onClick={() => {
+                    setConfirmingFinish(false);
+                    stopSpeaking();
+                    setHasUserInteracted(true);
+                    setCurrentIndex(index);
+                  }}
+                  className={cn("rounded-2xl border p-3 text-left text-sm transition", index === currentIndex ? "border-primary/50 bg-primary/10 text-foreground" : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground")}
+                >
                   <span className="font-semibold">Question {index + 1}</span>
                   <span className="mt-1 block truncate">{question.category}</span>
                   {answers[index]?.trim() ? <span className="mt-1 flex items-center gap-1 text-xs text-emerald-300"><CheckCircle2 className="size-3" /> Answered</span> : null}
@@ -423,9 +590,224 @@ export function InterviewSession({ interview, initialAnswers }: InterviewSession
                   </div>
                   <span className="text-sm text-muted-foreground">{currentIndex + 1}/{interview.questions.length}</span>
                 </div>
+
+                {/* AI Voice Interviewer Agent Bar */}
+                <div
+                  className={cn(
+                    "relative overflow-hidden rounded-2xl border p-4 transition-all duration-300",
+                    isSpeaking
+                      ? "border-primary/50 bg-primary/10 shadow-lg shadow-primary/10"
+                      : isListening
+                        ? "border-emerald-500/50 bg-emerald-500/10 shadow-lg shadow-emerald-500/10"
+                        : "border-white/10 bg-white/[0.03]"
+                  )}
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3.5">
+                      <div
+                        className={cn(
+                          "relative flex size-12 shrink-0 items-center justify-center rounded-2xl border transition-all duration-300",
+                          isSpeaking
+                            ? "border-primary/60 bg-primary/20 text-primary shadow-md shadow-primary/30"
+                            : isListening
+                              ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-400 shadow-md shadow-emerald-500/30 animate-pulse"
+                              : "border-white/10 bg-white/[0.05] text-primary"
+                        )}
+                      >
+                        {isSpeaking ? (
+                          <Volume2 className="size-6 animate-pulse" />
+                        ) : isListening ? (
+                          <Mic className="size-6 text-emerald-400" />
+                        ) : (
+                          <Bot className="size-6" />
+                        )}
+                        {(isSpeaking || isListening) && (
+                          <span className="absolute -top-1 -right-1 flex size-3">
+                            <span
+                              className={cn(
+                                "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+                                isSpeaking ? "bg-primary" : "bg-emerald-400"
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "relative inline-flex size-3 rounded-full",
+                                isSpeaking ? "bg-primary" : "bg-emerald-400"
+                              )}
+                            />
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">AI Voice Interviewer</p>
+                          <span
+                            className={cn(
+                              "rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
+                              isSpeaking
+                                ? "bg-primary/20 text-primary"
+                                : isListening
+                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  : "bg-white/[0.08] text-muted-foreground"
+                            )}
+                          >
+                            {isSpeaking ? "Speaking Question..." : isListening ? "Listening to Answer..." : "Ready"}
+                          </span>
+                        </div>
+
+                        {isSpeaking ? (
+                          <div className="mt-1 flex items-center gap-2 text-xs font-medium text-primary">
+                            <div className="flex h-3 items-end gap-1">
+                              <span className="h-3 w-1 animate-pulse rounded-full bg-primary" />
+                              <span className="h-2 w-1 animate-pulse rounded-full bg-primary" />
+                              <span className="h-3.5 w-1 animate-pulse rounded-full bg-primary" />
+                              <span className="h-2.5 w-1 animate-pulse rounded-full bg-primary" />
+                            </div>
+                            <span>Asking question aloud...</span>
+                          </div>
+                        ) : isListening ? (
+                          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                            <Radio className="size-3.5 animate-pulse" />
+                            Listening... Speak clearly to answer. Transcribing in real time below.
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Listen to questions spoken aloud and dictate your answers hands-free.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {isSpeaking ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="border-red-500/40 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                          onClick={stopSpeaking}
+                        >
+                          <VolumeX className="mr-1.5 size-4" /> Stop Voice
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="default"
+                          disabled={!ttsSupported}
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                          onClick={() => {
+                            setHasUserInteracted(true);
+                            speakCurrentQuestion();
+                          }}
+                        >
+                          <Volume2 className="mr-1.5 size-4" /> Ask Question Aloud
+                        </Button>
+                      )}
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className={cn(
+                          "text-xs transition",
+                          autoReadQuestions ? "bg-white/[0.08] font-semibold text-foreground" : "text-muted-foreground"
+                        )}
+                        onClick={() => {
+                          setHasUserInteracted(true);
+                          setAutoReadQuestions((prev) => !prev);
+                        }}
+                        title="Automatically read each new question aloud when you navigate"
+                      >
+                        <Headphones className="mr-1.5 size-3.5 text-primary" />
+                        Auto-read: {autoReadQuestions ? "ON" : "OFF"}
+                      </Button>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className={cn(
+                          "text-xs transition",
+                          autoListenAfterQuestion
+                            ? "border border-emerald-500/30 bg-emerald-500/10 font-semibold text-emerald-400"
+                            : "text-muted-foreground"
+                        )}
+                        onClick={() => {
+                          setHasUserInteracted(true);
+                          setAutoListenAfterQuestion((prev) => !prev);
+                        }}
+                        title="Automatically start microphone when the interviewer finishes speaking the question"
+                      >
+                        <Sparkles className="mr-1.5 size-3.5 text-emerald-400" />
+                        Auto-mic: {autoListenAfterQuestion ? "ON" : "OFF"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid gap-3 md:grid-cols-2"><div className="rounded-2xl bg-white/[0.035] p-4"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Intent</p><p className="mt-2 text-sm leading-6">{currentQuestion.intent}</p></div><div className="rounded-2xl bg-white/[0.035] p-4"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Follow-ups</p><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{currentQuestion.followUps.map((followUp) => <li key={followUp}>• {followUp}</li>)}</ul></div></div>
+
                 <label className="block"><span className="text-sm font-semibold text-foreground">Your answer</span><textarea value={answers[currentIndex]} onChange={(event) => updateAnswer(event.target.value)} placeholder="Type your structured answer here. It autosaves as you write." className="mt-3 min-h-64 w-full resize-y rounded-3xl border border-white/10 bg-background/70 p-4 text-sm leading-6 outline-none transition focus:border-primary/60" /></label>
-                <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between"><Button type="button" variant="outline" onClick={toggleVoice} disabled={!voiceSupported}>{isListening ? <MicOff /> : <Mic />}{isListening ? "Stop voice" : "Voice input"}</Button>{!voiceSupported ? <p className="text-sm text-muted-foreground">Voice input is unavailable in this browser.</p> : null}<div className="flex gap-2"><Button type="button" variant="outline" disabled={currentIndex === 0} onClick={() => { setConfirmingFinish(false); setCurrentIndex((index) => Math.max(0, index - 1)); }}><ChevronLeft /> Previous</Button><Button type="button" disabled={currentIndex === interview.questions.length - 1} onClick={() => { setConfirmingFinish(false); setCurrentIndex((index) => Math.min(interview.questions.length - 1, index + 1)); }}>Next <ChevronRight /></Button></div></div>
+
+                <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      type="button"
+                      variant={isListening ? "default" : "outline"}
+                      className={cn(
+                        "transition-all",
+                        isListening
+                          ? "border-emerald-500/60 bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-500"
+                          : ""
+                      )}
+                      onClick={toggleVoice}
+                      disabled={!voiceSupported}
+                    >
+                      {isListening ? <MicOff className="mr-2 size-4" /> : <Mic className="mr-2 size-4" />}
+                      {isListening ? "Stop voice dictation" : "Voice answer (Mic)"}
+                    </Button>
+                    {isListening && (
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                        <Radio className="size-3.5 animate-pulse" />
+                        Recording answer...
+                      </span>
+                    )}
+                    {!voiceSupported ? (
+                      <p className="text-xs text-muted-foreground">Voice dictation is unavailable in this browser.</p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={currentIndex === 0}
+                      onClick={() => {
+                        setConfirmingFinish(false);
+                        stopSpeaking();
+                        setHasUserInteracted(true);
+                        setCurrentIndex((index) => Math.max(0, index - 1));
+                      }}
+                    >
+                      <ChevronLeft /> Previous
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={currentIndex === interview.questions.length - 1}
+                      onClick={() => {
+                        setConfirmingFinish(false);
+                        stopSpeaking();
+                        setHasUserInteracted(true);
+                        setCurrentIndex((index) => Math.min(interview.questions.length - 1, index + 1));
+                      }}
+                    >
+                      Next <ChevronRight />
+                    </Button>
+                  </div>
+                </div>
+
                 <p className="flex items-center gap-2 text-xs text-muted-foreground"><Save className="size-3.5" /> {autosaveLabel}</p>
               </div>
             )}
